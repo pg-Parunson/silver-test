@@ -1,3 +1,5 @@
 refs/
 .DS_Store
 .vercel/
+
+supabase/.temp/
