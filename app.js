@@ -247,7 +247,15 @@
   function gradeSA(q, userInput) {
     var u = normalizeSA(userInput);
     if (!u) return false;
-    return q.accept.some(function (a) { return normalizeSA(a) === u; });
+    // 복수답·서술형: 채점 키워드가 모두 포함되면 정답
+    if (q.keywords && q.keywords.length) {
+      return q.keywords.every(function (k) { return u.indexOf(normalizeSA(k)) !== -1; });
+    }
+    // 단답형: 정규화 후 일치 또는 답이 입력 안에 포함("코멕스(COMEX)" 입력도 인정)
+    return (q.accept || []).some(function (a) {
+      var n = normalizeSA(a);
+      return n === u || (n.length >= 2 && u.indexOf(n) !== -1);
+    });
   }
 
   function submitExam(auto) {
