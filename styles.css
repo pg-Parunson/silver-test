@@ -121,6 +121,52 @@ button:disabled { opacity: 0.35; cursor: default; }
 }
 .start-hint b { color: var(--ink); font-weight: 700; }
 
+.btn-line.study {
+  width: 100%; margin-top: 10px; padding: 13px;
+  border-style: dashed; color: var(--stamp-ink); font-weight: 700;
+}
+
+/* ── 학습 모드 ── */
+.study-topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; gap: 6px; align-items: center;
+  background: var(--desk); padding: 10px 2px;
+  border-bottom: 2px solid var(--line-dark);
+}
+.study-select {
+  flex: 1 1 0; min-width: 0;
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 600;
+  border: 1px solid var(--line-dark); border-radius: 4px;
+  background: var(--paper); color: var(--ink); padding: 9px 6px;
+}
+.study-topbar .btn-line { padding: 9px 12px; font-size: 0.82rem; white-space: nowrap; }
+.study-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 10px 2px 8px; font-family: var(--sans);
+}
+.study-progress { font-weight: 700; color: var(--ink-soft); font-size: 0.9rem; }
+.study-actions { display: flex; gap: 10px; margin-top: 14px; }
+.study-actions button { flex: 1; padding: 13px; font-size: 0.95rem; }
+
+.choice.static { cursor: default; }
+.choice.static:hover { background: transparent; }
+.choice.struck { opacity: 0.35; text-decoration: line-through; }
+.choice.is-answer {
+  border-color: var(--green); background: var(--green-soft);
+}
+.choice .ans-mark {
+  margin-left: auto; font-family: var(--sans); font-size: 0.72rem;
+  font-weight: 800; color: var(--green); white-space: nowrap;
+}
+.study-hint {
+  margin-top: 14px; padding: 12px 14px; border-radius: 4px;
+  background: #fdf6e3; border-left: 3px solid var(--warn);
+  font-family: var(--sans); font-size: 0.9rem; color: var(--ink);
+}
+.study-hint b { color: var(--warn); margin-right: 6px; }
+.study-hint .src { display: block; margin-top: 5px; font-size: 0.78rem; color: var(--ink-soft); }
+.study-answer { font-size: 1rem; margin-top: 10px; }
+
 /* 순위표 유형 탭 */
 .rank-tabs { display: flex; gap: 6px; justify-content: center; margin: 8px 0 6px; }
 .rank-tab {
@@ -218,8 +264,17 @@ button:disabled { opacity: 0.35; cursor: default; }
 .choice.selected { background: var(--navy-soft); border-color: var(--navy); }
 .choice.selected .num { color: var(--navy); }
 
+.sa-answers { margin-top: 6px; }
+.sa-answers.multi .sa-answer-row { margin-top: 10px; }
+.sa-guide {
+  margin: 0 0 4px; font-family: var(--sans); font-size: 0.78rem;
+  color: var(--warn); font-weight: 600;
+}
 .sa-answer-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-.sa-answer-row .sa-mark { font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.sa-answer-row .sa-mark {
+  font-weight: 700; color: var(--ink-soft); white-space: nowrap;
+  min-width: 26px; text-align: right;
+}
 .sa-input {
   flex: 1; min-width: 0; font-family: var(--serif); font-size: 1.05rem;
   border: none; border-bottom: 2px solid var(--line-dark); background: transparent;

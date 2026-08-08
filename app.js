@@ -17,7 +17,7 @@
   var DEFAULT_MODE = 'full';
   function modeOf(k) { return MODES[k] || MODES[DEFAULT_MODE]; }
   var LS_HISTORY = 'jewelry-exam-history-v1';
-  var LS_INPROGRESS = 'jewelry-exam-inprogress-v2';
+  var LS_INPROGRESS = 'jewelry-exam-inprogress-v3';   // v3: 주관식 답안이 배열
   var LS_NAME = 'jewelry-exam-name-v1';
   var LS_RANKING = 'jewelry-exam-ranking-v1';
 
@@ -48,6 +48,39 @@
   }
 
   function isOX(q) { return q.type === 'mc' && q.choices && q.choices.length === 2; }
+
+  /* ---------- 복수답 주관식: 답 개수만큼 답란을 나눈다 ---------- */
+
+  // 키워드 수 = 써야 할 답의 수
+  function slotCount(q) {
+    return (q.type === 'sa' && q.keywords && q.keywords.length > 1) ? q.keywords.length : 1;
+  }
+  // ㉠㉡ 빈칸형은 자리마다 답이 정해져 있어 순서를 지켜야 한다.
+  // "N가지 쓰시오"형은 순서가 상관없다.
+  function isOrderedSlots(q) { return /[㉠㉡㉢㉣]/.test(q.question || ''); }
+
+  var SLOT_MARKS = ['㉠', '㉡', '㉢', '㉣', '㉤'];
+  function slotLabels(q) {
+    var n = slotCount(q);
+    if (n <= 1) return [''];
+    var ordered = isOrderedSlots(q);
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(ordered ? SLOT_MARKS[i] : (i + 1) + '.');
+    return out;
+  }
+
+  // 답안을 항상 배열로 다룬다(구버전 기록의 문자열도 수용)
+  function answerFields(q, mine) {
+    var n = slotCount(q);
+    var arr = Array.isArray(mine) ? mine.slice() : (mine === undefined ? [] : [mine]);
+    while (arr.length < n) arr.push('');
+    return arr.slice(0, Math.max(n, arr.length));
+  }
+
+  function hasAnswer(q, mine) {
+    if (q.type === 'mc') return mine !== undefined;
+    return answerFields(q, mine).some(function (v) { return (v || '').trim() !== ''; });
+  }
 
   // 단원별로 골고루: 단원 그룹 셔플 후 라운드로빈.
   // 정답이 겹치는 문항과, OX_MAX를 넘는 OX형은 뒤로 미룬다(모자라면 되돌려 채움).
@@ -118,7 +151,7 @@
   var CIRCLED = ['①', '②', '③', '④', '⑤'];
 
   function show(id) {
-    ['screen-home', 'screen-exam', 'screen-result'].forEach(function (s) {
+    ['screen-home', 'screen-exam', 'screen-study', 'screen-result'].forEach(function (s) {
       document.getElementById(s).classList.toggle('hidden', s !== id);
     });
     window.scrollTo(0, 0);
@@ -383,10 +416,52 @@
   function updateQnav() {
     var buttons = $('#qnav').children;
     state.questions.forEach(function (q, i) {
-      var answered = state.answers[i] !== undefined && state.answers[i] !== '';
+      var answered = hasAnswer(q, state.answers[i]);
       buttons[i].className = (answered ? 'answered' : '') + (i === state.idx ? ' current' : '');
     });
     $('#progress').textContent = (state.idx + 1) + ' / ' + state.questions.length;
+  }
+
+  // 주관식 답란. 복수답이면 답 개수만큼 칸을 만든다.
+  function buildAnswerBox(q, current, onChange) {
+    var n = slotCount(q);
+    var labels = slotLabels(q);
+    var vals = answerFields(q, current);
+
+    var box = document.createElement('div');
+    box.className = 'sa-answers' + (n > 1 ? ' multi' : '');
+
+    if (n > 1) {
+      var guide = document.createElement('p');
+      guide.className = 'sa-guide';
+      guide.textContent = isOrderedSlots(q)
+        ? '빈칸 순서에 맞게 각 칸에 하나씩 쓰시오.'
+        : n + '가지를 각 칸에 하나씩 나누어 쓰시오. (순서 무관)';
+      box.appendChild(guide);
+    }
+
+    for (var s = 0; s < n; s++) {
+      (function (s) {
+        var row = document.createElement('div');
+        row.className = 'sa-answer-row';
+        var mark = document.createElement('span');
+        mark.className = 'sa-mark';
+        mark.textContent = n > 1 ? labels[s] : '답 :';
+        row.appendChild(mark);
+        var input = document.createElement('input');
+        input.className = 'sa-input';
+        input.type = 'text';
+        input.placeholder = n > 1 ? '' : '답안을 기입하시오';
+        input.value = vals[s] || '';
+        input.addEventListener('input', function () {
+          vals[s] = input.value;
+          onChange(vals.slice());
+        });
+        row.appendChild(input);
+        box.appendChild(row);
+      })(s);
+    }
+    return box;
   }
 
   function renderQuestion() {
@@ -439,24 +514,11 @@
       });
       card.appendChild(wrap);
     } else {
-      var row = document.createElement('div');
-      row.className = 'sa-answer-row';
-      var mark = document.createElement('span');
-      mark.className = 'sa-mark';
-      mark.textContent = '답 :';
-      row.appendChild(mark);
-      var input = document.createElement('input');
-      input.className = 'sa-input';
-      input.type = 'text';
-      input.placeholder = '답안을 기입하시오';
-      input.value = state.answers[i] || '';
-      input.addEventListener('input', function () {
-        state.answers[i] = input.value;
+      card.appendChild(buildAnswerBox(q, state.answers[i], function (vals) {
+        state.answers[i] = vals;
         persistInProgress();
         updateQnav();
-      });
-      row.appendChild(input);
-      card.appendChild(row);
+      }));
     }
 
     area.appendChild(card);
@@ -469,24 +531,51 @@
   /* ---------- 채점 ---------- */
 
   function gradeSA(q, userInput) {
-    var u = normalizeSA(userInput);
-    if (!u) return false;
-    // 복수답: 키워드를 긴 것부터 찾고 맞은 자리를 지워 나간다. 그냥 포함 여부만 보면
-    // "반강성포장" 한 단어가 키워드 '반강성'과 '강성'을 동시에 만족시켜 오답이 통과한다.
+    var vals = answerFields(q, userInput).map(normalizeSA);
+    if (!vals.some(function (v) { return v; })) return false;
+
     if (q.keywords && q.keywords.length) {
-      var rest = u;
-      var ks = q.keywords.map(normalizeSA).sort(function (a, b) { return b.length - a.length; });
-      return ks.every(function (k) {
-        if (!k) return true;
-        var at = rest.indexOf(k);
-        if (at === -1) return false;
-        rest = rest.slice(0, at) + ' ' + rest.slice(at + k.length);
-        return true;
-      });
+      var ks = q.keywords.map(normalizeSA);
+
+      // 답란이 나뉜 경우 — 칸 단위로 채점.
+      // (배열이 아닌 예전 형식은 아래 '몰아쓰기' 경로로 넘긴다)
+      if (slotCount(q) > 1 && Array.isArray(userInput)) {
+        if (isOrderedSlots(q)) {
+          // ㉠㉡ 빈칸: 자리마다 정해진 답이 들어가야 한다
+          return ks.every(function (k, i) {
+            return !!vals[i] && vals[i].indexOf(k) !== -1;
+          });
+        }
+        // 순서 무관: 키워드마다 서로 다른 칸이 하나씩 대응돼야 한다.
+        // 긴 키워드부터 짝지어야 '강성'이 '반강성포장' 칸을 가로채지 않는다.
+        var used = {};
+        return ks.slice()
+          .sort(function (a, b) { return b.length - a.length; })
+          .every(function (k) {
+            for (var i = 0; i < vals.length; i++) {
+              if (!used[i] && vals[i] && vals[i].indexOf(k) !== -1) { used[i] = true; return true; }
+            }
+            return false;
+          });
+      }
+
+      // 한 칸에 몰아 쓴 경우: 맞은 자리를 지워 가며 센다
+      var rest = vals.join(' ');
+      return ks.slice()
+        .sort(function (a, b) { return b.length - a.length; })
+        .every(function (k) {
+          if (!k) return true;
+          var at = rest.indexOf(k);
+          if (at === -1) return false;
+          rest = rest.slice(0, at) + ' ' + rest.slice(at + k.length);
+          return true;
+        });
     }
-    // 완전일치 또는 정답으로 시작하는 경우만 인정("코멕스(COMEX)", "루페입니다" 통과).
+
+    // 단답: 완전일치 또는 정답으로 시작하는 경우만 인정("코멕스(COMEX)", "루페입니다" 통과).
     // 중간 포함까지 허용하면 정답 "강성"이 오답 "반강성포장"을 통과시키므로 접두 일치까지만 둔다.
-    return (q.accept || []).some(function (a) {
+    var u = vals[0];
+    return !!u && (q.accept || []).some(function (a) {
       var n = normalizeSA(a);
       return n.length > 0 && (n === u || u.indexOf(n) === 0);
     });
@@ -494,8 +583,8 @@
 
   function submitExam(auto) {
     if (!auto) {
-      var unanswered = state.questions.filter(function (_, i) {
-        return state.answers[i] === undefined || state.answers[i] === '';
+      var unanswered = state.questions.filter(function (q, i) {
+        return !hasAnswer(q, state.answers[i]);
       }).length;
       var msg = unanswered > 0
         ? '기입하지 않은 문항이 ' + unanswered + '개 있습니다. 답안을 제출할까요?'
@@ -639,16 +728,25 @@
         card.appendChild(no);
       }
     } else {
+      var labels = slotLabels(q);
+      var mineVals = answerFields(q, r.mine);
+      var written = mineVals.map(function (v, s) {
+        v = (v || '').trim();
+        if (!v) return null;
+        return (slotCount(q) > 1 ? labels[s] + ' ' : '') + v;
+      }).filter(Boolean);
+
       var mineRow = document.createElement('p');
       mineRow.className = 'rrow ' + (r.correct ? 'my-right' : 'my-wrong');
-      mineRow.innerHTML = '<b>내 답안:</b> ' + (r.mine ? escapeHtml(r.mine) : '(미기입)');
+      mineRow.innerHTML = '<b>내 답안:</b> ' +
+        (written.length ? escapeHtml(written.join('  /  ')) : '(미기입)');
       card.appendChild(mineRow);
       var ansRow = document.createElement('p');
       ansRow.className = 'rrow';
       ansRow.innerHTML = '<b>모범답안:</b> ' + escapeHtml(q.answerText);
       card.appendChild(ansRow);
 
-      if (!r.correct && r.mine) {
+      if (!r.correct && written.length) {
         var sg = document.createElement('div');
         sg.className = 'self-grade';
         var btn = document.createElement('button');
@@ -680,6 +778,157 @@
     card.appendChild(ex);
 
     return card;
+  }
+
+  /* ---------- 학습 모드 ---------- */
+
+  var study = { list: [], idx: 0, hint: false, reveal: false, unit: 'all', type: 'all' };
+
+  function studyPool() {
+    return QUESTIONS.filter(function (q) {
+      if (study.unit !== 'all' && q.unit !== study.unit) return false;
+      if (study.type !== 'all' && q.type !== study.type) return false;
+      return true;
+    });
+  }
+
+  function studyReload(keepIdx) {
+    study.list = shuffle(studyPool());
+    study.idx = keepIdx ? Math.min(study.idx, Math.max(0, study.list.length - 1)) : 0;
+    study.hint = false;
+    study.reveal = false;
+    renderStudy();
+  }
+
+  // 힌트는 답을 바로 주지 않는다. 객관식은 오답 2개를 지우고,
+  // 주관식은 출처와 글자 수·첫 글자만 알려준다.
+  function hintFor(q) {
+    if (q.type === 'mc') {
+      return '오답 ' + (q.choices.length === 2 ? 0 : 2) + '개를 지웠습니다. 남은 선지에서 고르세요.';
+    }
+    var labels = slotLabels(q);
+    var parts = (q.answerText || '').split(/\s*,\s*/);
+    var shape = [];
+    for (var s = 0; s < slotCount(q); s++) {
+      var raw = (parts[s] || '').replace(/^[㉠㉡㉢㉣]\s*/, '').trim();
+      var head = raw.slice(0, 1);
+      shape.push((slotCount(q) > 1 ? labels[s] + ' ' : '') +
+        (head ? head + '○'.repeat(Math.max(0, raw.length - 1)) : '?') +
+        ' (' + raw.length + '글자)');
+    }
+    return shape.join('   ');
+  }
+
+  // 객관식 힌트: 정답 외 선지 중 2개를 지운다(문항마다 같은 것이 지워지도록 고정)
+  function hiddenChoices(q) {
+    if (q.type !== 'mc' || q.choices.length !== 4) return {};
+    var wrong = [];
+    for (var i = 0; i < q.choices.length; i++) if (i !== q.answer) wrong.push(i);
+    var seed = 0;
+    for (var c = 0; c < q.id.length; c++) seed = (seed * 31 + q.id.charCodeAt(c)) >>> 0;
+    var out = {};
+    out[wrong[seed % wrong.length]] = true;
+    out[wrong[(seed + 1) % wrong.length]] = true;
+    return out;
+  }
+
+  function renderStudy() {
+    var area = $('#study-area');
+    area.innerHTML = '';
+    if (!study.list.length) {
+      area.innerHTML = '<div class="paper qcard"><p class="qtext">조건에 맞는 문제가 없습니다.</p></div>';
+      $('#study-progress').textContent = '0 / 0';
+      return;
+    }
+    var q = study.list[study.idx];
+    $('#study-progress').textContent = (study.idx + 1) + ' / ' + study.list.length;
+
+    var card = document.createElement('div');
+    card.className = 'paper qcard';
+
+    var meta = document.createElement('div');
+    meta.className = 'qmeta';
+    meta.innerHTML =
+      '<span class="tag ' + q.type + '">' + (q.type === 'mc' ? '객관식' : '주관식') + '</span>' +
+      '<span class="tag unit">' + escapeHtml(q.unit) + '</span>' +
+      (q.source ? '<span class="tag unit">' + escapeHtml(q.source) + '</span>' : '');
+    card.appendChild(meta);
+
+    var qt = document.createElement('p');
+    qt.className = 'qtext';
+    qt.textContent = q.question;
+    card.appendChild(qt);
+
+    if (q.image) {
+      var img = document.createElement('img');
+      img.className = 'qimg';
+      img.src = q.image;
+      img.alt = '문제 제시 사진';
+      card.appendChild(img);
+    }
+
+    if (q.type === 'mc') {
+      var hidden = study.hint && !study.reveal ? hiddenChoices(q) : {};
+      var wrap = document.createElement('div');
+      wrap.className = 'choices';
+      q.choices.forEach(function (c, ci) {
+        var b = document.createElement('div');
+        b.className = 'choice static' +
+          (hidden[ci] ? ' struck' : '') +
+          (study.reveal && ci === q.answer ? ' is-answer' : '');
+        b.innerHTML = '<span class="num">' + CIRCLED[ci] + '</span><span>' + escapeHtml(c) + '</span>' +
+          (study.reveal && ci === q.answer ? '<span class="ans-mark">정답</span>' : '');
+        wrap.appendChild(b);
+      });
+      card.appendChild(wrap);
+    } else if (study.reveal) {
+      var ans = document.createElement('p');
+      ans.className = 'rrow my-right study-answer';
+      ans.innerHTML = '<b>정답:</b> ' + escapeHtml(q.answerText);
+      card.appendChild(ans);
+    }
+
+    if (study.hint && !study.reveal) {
+      var h = document.createElement('div');
+      h.className = 'study-hint';
+      h.innerHTML = '<b>힌트</b> ' + escapeHtml(hintFor(q)) +
+        (q.source ? '<span class="src">' + escapeHtml(q.source) + '</span>' : '');
+      card.appendChild(h);
+    }
+
+    if (study.reveal) {
+      var ex = document.createElement('div');
+      ex.className = 'expl';
+      ex.textContent = q.explanation;
+      if (q.source) {
+        var src = document.createElement('span');
+        src.className = 'src';
+        src.textContent = '출처: ' + q.source;
+        ex.appendChild(src);
+      }
+      card.appendChild(ex);
+    }
+
+    area.appendChild(card);
+
+    $('#btn-hint').disabled = study.reveal;
+    $('#btn-hint').textContent = study.hint ? '💡 힌트 표시 중' : '💡 힌트 보기';
+    $('#btn-reveal').textContent = study.reveal ? '정답 숨기기' : '정답·해설 보기';
+    $('#btn-study-prev').disabled = study.idx === 0;
+    $('#btn-study-next').disabled = study.idx >= study.list.length - 1;
+  }
+
+  function startStudy() {
+    var sel = $('#study-unit');
+    if (!sel.options.length) {
+      var units = [];
+      QUESTIONS.forEach(function (q) { if (units.indexOf(q.unit) === -1) units.push(q.unit); });
+      units.sort();
+      sel.innerHTML = '<option value="all">전체 단원</option>' +
+        units.map(function (u) { return '<option value="' + escapeHtml(u) + '">' + escapeHtml(u) + '</option>'; }).join('');
+    }
+    studyReload(false);
+    show('screen-study');
   }
 
   /* ---------- 내 기록 ---------- */
@@ -766,6 +1015,30 @@
 
   $('#btn-start').addEventListener('click', function () { tryStart('full'); });
   $('#btn-start-sa').addEventListener('click', function () { tryStart('sa'); });
+
+  $('#btn-study').addEventListener('click', function () {
+    if (typeof QUESTIONS === 'undefined' || !QUESTIONS.length) {
+      alert('문제은행이 아직 준비되지 않았습니다.');
+      return;
+    }
+    startStudy();
+  });
+  $('#btn-study-home').addEventListener('click', function () { renderHome(); show('screen-home'); });
+  $('#btn-study-shuffle').addEventListener('click', function () { studyReload(false); });
+  $('#study-unit').addEventListener('change', function () { study.unit = this.value; studyReload(false); });
+  $('#study-type').addEventListener('change', function () { study.type = this.value; studyReload(false); });
+  $('#btn-hint').addEventListener('click', function () { study.hint = !study.hint; renderStudy(); });
+  $('#btn-reveal').addEventListener('click', function () {
+    study.reveal = !study.reveal;
+    if (study.reveal) study.hint = false;
+    renderStudy();
+  });
+  $('#btn-study-prev').addEventListener('click', function () {
+    if (study.idx > 0) { study.idx--; study.hint = false; study.reveal = false; renderStudy(); }
+  });
+  $('#btn-study-next').addEventListener('click', function () {
+    if (study.idx < study.list.length - 1) { study.idx++; study.hint = false; study.reveal = false; renderStudy(); }
+  });
 
   $('#rank-tabs').addEventListener('click', function (e) {
     var b = e.target.closest('.rank-tab');

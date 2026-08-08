@@ -46,9 +46,11 @@
         <button id="btn-start" class="btn-exam">시험 시작</button>
         <button id="btn-start-sa" class="btn-exam alt">주관식만</button>
       </div>
+      <button id="btn-study" class="btn-line study">📖 학습 시작 — 정답·해설 보며 공부</button>
       <p class="start-hint">
         <b>시험 시작</b> — 객관식 16 + 주관식 4 (실제 시험과 동일)<br>
-        <b>주관식만</b> — 주관식 20문항 집중 연습
+        <b>주관식만</b> — 주관식 20문항 집중 연습<br>
+        <b>학습 시작</b> — 시간·점수 없이 224문항을 힌트·해설과 함께
       </p>
       <div class="stamp" aria-hidden="true">모의<br>평가</div>
 
@@ -92,6 +94,32 @@
     <div class="exam-bottombar">
       <button id="btn-prev" class="btn-line">◀ 이전</button>
       <button id="btn-next" class="btn-exam">다음 ▶</button>
+    </div>
+  </section>
+
+  <!-- ── 학습 모드 ── -->
+  <section id="screen-study" class="screen hidden">
+    <div class="study-topbar">
+      <select id="study-unit" class="study-select" aria-label="단원 선택"></select>
+      <select id="study-type" class="study-select" aria-label="문제 유형">
+        <option value="all">전체 유형</option>
+        <option value="mc">객관식만</option>
+        <option value="sa">주관식만</option>
+      </select>
+      <button id="btn-study-home" class="btn-line">나가기</button>
+    </div>
+    <div class="study-bar">
+      <span id="study-progress" class="study-progress"></span>
+      <button id="btn-study-shuffle" class="btn-ghost">🔀 다시 섞기</button>
+    </div>
+    <div id="study-area"></div>
+    <div class="study-actions">
+      <button id="btn-hint" class="btn-line">💡 힌트 보기</button>
+      <button id="btn-reveal" class="btn-exam">정답·해설 보기</button>
+    </div>
+    <div class="exam-bottombar">
+      <button id="btn-study-prev" class="btn-line">◀ 이전</button>
+      <button id="btn-study-next" class="btn-line">다음 ▶</button>
     </div>
   </section>
 
