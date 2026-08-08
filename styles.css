@@ -12,6 +12,7 @@
   --green: #1e7a45;
   --green-soft: #e8f4ec;
   --warn: #b45309;
+  --stamp-ink: #3b2e8c;     /* 선생님 도장 남보라 잉크 */
   --serif: "Noto Serif KR", "Apple SD Gothic Neo", serif;
   --sans: "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
 }
@@ -224,12 +225,12 @@ button:disabled { opacity: 0.35; cursor: default; }
 /* 점수 구간별 선생님 도장 */
 .verdict-block { margin: 18px 0 4px; }
 .verdict-stamp {
-  display: block; width: 112px; height: 112px; margin: 0 auto;
-  transform: rotate(-9deg);
+  display: block; width: 132px; height: 132px; margin: 0 auto;
+  transform: rotate(-6deg);
 }
 .verdict-message {
   margin: 6px 0 0; font-size: 1.15rem; font-weight: 700;
-  color: var(--red); letter-spacing: 0.05em;
+  color: var(--stamp-ink); letter-spacing: 0.05em;
 }
 
 .review-title { font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; margin: 22px 2px 10px; }

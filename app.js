@@ -532,9 +532,9 @@
 
   // 점수 구간별 선생님 도장
   function verdictOf(score) {
-    if (score === 100) return { file: 'stamp-perfect.svg', message: '완벽해요' };
-    if (score >= 90) return { file: 'stamp-great.svg', message: '참 잘했어요' };
-    return { file: 'stamp-cheer.svg', message: '화이팅!' };
+    if (score === 100) return { file: 'stamp-perfect.png', message: '완벽해요' };
+    if (score >= 90) return { file: 'stamp-great.png', message: '참 잘했어요' };
+    return { file: 'stamp-cheer.png', message: '화이팅!' };
   }
 
   function renderResult(record) {

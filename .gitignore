@@ -3,3 +3,4 @@ refs/
 .vercel/
 
 supabase/.temp/
+.stamp-ref.png
