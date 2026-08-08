@@ -530,6 +530,13 @@
 
   /* ---------- 성적 통지표 ---------- */
 
+  // 점수 구간별 선생님 도장
+  function verdictOf(score) {
+    if (score === 100) return { file: 'stamp-perfect.svg', message: '완벽해요' };
+    if (score >= 90) return { file: 'stamp-great.svg', message: '참 잘했어요' };
+    return { file: 'stamp-cheer.svg', message: '화이팅!' };
+  }
+
   function renderResult(record) {
     var score = scoreOf(record);
     var pass = score >= PASS;
@@ -537,14 +544,19 @@
 
     $('#result-name').textContent = record.name;
     $('#result-date').textContent = fmtDate(record.ts) + (record.auto ? ' (시간 종료)' : '');
-    $('#result-score-cell').textContent = score + '점 / 100점';
+    $('#result-score-cell').innerHTML = score + '<span class="of">/100</span>';
     var passCell = $('#result-pass-cell');
     passCell.textContent = pass ? '합 격' : '불합격';
     passCell.className = pass ? 'pass' : 'fail';
     $('#result-correct').textContent = nCorrect + ' / 20';
     $('#result-duration').textContent = fmtTime(record.durationMs);
     $('#result-rank-line').textContent = '';
-    $('#result-stamp').classList.toggle('hidden', !pass);
+
+    var v = verdictOf(score);
+    var stamp = $('#result-stamp');
+    stamp.src = 'images/' + v.file;
+    stamp.alt = v.message + ' 도장';
+    $('#result-message').textContent = v.message;
 
     var list = $('#result-list');
     list.innerHTML = '';

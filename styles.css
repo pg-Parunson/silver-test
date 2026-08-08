@@ -198,16 +198,28 @@ button:disabled { opacity: 0.35; cursor: default; }
 /* ── 성적 통지표 ── */
 .report { text-align: center; padding-top: 26px; }
 .report-title { margin: 0 0 18px; font-size: 1.5rem; font-weight: 900; letter-spacing: 0.35em; }
-.report-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.95rem; margin-bottom: 12px; }
-.report-table th, .report-table td { border: 1px solid var(--line-dark); padding: 10px 6px; }
-.report-table th { background: #f1efe8; font-weight: 700; width: 19%; }
-.report-table td { width: 31%; }
-#result-score-cell { font-weight: 900; font-size: 1.35rem; }
+.report-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.9rem; margin-bottom: 12px; table-layout: fixed; }
+.report-table th, .report-table td { border: 1px solid var(--line-dark); padding: 10px 4px; word-break: keep-all; }
+.report-table th { background: #f1efe8; font-weight: 700; width: 22%; font-size: 0.8rem; white-space: nowrap; }
+.report-table td { width: 28%; }
+#result-score-cell { font-weight: 900; font-size: 1.25rem; white-space: nowrap; }
+#result-score-cell .of { font-size: 0.72rem; font-weight: 600; color: var(--ink-soft); }
+#result-duration { white-space: nowrap; }
+#result-date { font-size: 0.82rem; line-height: 1.35; }
 #result-pass-cell.pass { color: var(--green); font-weight: 900; font-size: 1.1rem; }
 #result-pass-cell.fail { color: var(--red); font-weight: 900; font-size: 1.1rem; }
 .rank-line { font-family: var(--sans); font-size: 0.92rem; color: var(--ink-soft); margin: 4px 0 0; }
 .rank-line b { color: var(--navy); font-size: 1.05rem; }
-.report-stamp { top: auto; bottom: 14px; right: 14px; font-size: 0.8rem; width: 68px; height: 68px; border-color: var(--navy); color: var(--navy); }
+/* 점수 구간별 선생님 도장 */
+.verdict-block { margin: 18px 0 4px; }
+.verdict-stamp {
+  display: block; width: 112px; height: 112px; margin: 0 auto;
+  transform: rotate(-9deg);
+}
+.verdict-message {
+  margin: 6px 0 0; font-size: 1.15rem; font-weight: 700;
+  color: var(--red); letter-spacing: 0.05em;
+}
 
 .review-title { font-size: 1.02rem; font-weight: 700; letter-spacing: 0.08em; margin: 22px 2px 10px; }
 
