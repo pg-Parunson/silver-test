@@ -148,24 +148,29 @@ button:disabled { opacity: 0.35; cursor: default; }
 .study-actions { display: flex; gap: 10px; margin-top: 14px; }
 .study-actions button { flex: 1; padding: 13px; font-size: 0.95rem; }
 
+.study-stats { font-family: var(--sans); font-size: 0.82rem; font-weight: 700; margin-left: 10px; }
+.study-stats .ok { color: var(--green); }
+.study-stats .no { color: var(--red); }
+
 .choice.static { cursor: default; }
 .choice.static:hover { background: transparent; }
-.choice.struck { opacity: 0.35; text-decoration: line-through; }
-.choice.is-answer {
-  border-color: var(--green); background: var(--green-soft);
-}
+.choice.is-answer { border-color: var(--green); background: var(--green-soft); }
+.choice.is-wrong { border-color: var(--red); background: var(--red-soft); }
 .choice .ans-mark {
   margin-left: auto; font-family: var(--sans); font-size: 0.72rem;
-  font-weight: 800; color: var(--green); white-space: nowrap;
+  font-weight: 800; white-space: nowrap; align-self: center;
 }
-.study-hint {
-  margin-top: 14px; padding: 12px 14px; border-radius: 4px;
-  background: #fdf6e3; border-left: 3px solid var(--warn);
-  font-family: var(--sans); font-size: 0.9rem; color: var(--ink);
+.choice .ans-mark.ok { color: var(--green); }
+.choice .ans-mark.no { color: var(--red); }
+
+.study-verdict {
+  font-family: var(--sans); font-weight: 800; font-size: 1rem;
+  border-radius: 4px; padding: 9px 12px; margin: 0 0 12px;
 }
-.study-hint b { color: var(--warn); margin-right: 6px; }
-.study-hint .src { display: block; margin-top: 5px; font-size: 0.78rem; color: var(--ink-soft); }
-.study-answer { font-size: 1rem; margin-top: 10px; }
+.study-verdict.ok { background: var(--green-soft); color: var(--green); }
+.study-verdict.no { background: var(--red-soft); color: var(--red); }
+.study-answer { font-size: 1rem; margin-top: 8px; color: var(--green); }
+.study-answer b { color: var(--ink); }
 
 /* 순위표 유형 탭 */
 .rank-tabs { display: flex; gap: 6px; justify-content: center; margin: 8px 0 6px; }

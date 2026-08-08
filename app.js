@@ -781,8 +781,17 @@
   }
 
   /* ---------- 학습 모드 ---------- */
+  // 직접 풀고 바로 채점받는 방식. 시간·랭킹 없음.
 
-  var study = { list: [], idx: 0, hint: false, reveal: false, unit: 'all', type: 'all' };
+  var study = {
+    list: [], idx: 0, unit: 'all', type: 'all',
+    mine: undefined,      // 지금 문제에 쓴 답
+    checked: false,       // 채점했는가
+    correct: null,        // 채점 결과
+    gaveUp: false,        // 모르겠어요로 넘긴 문제
+    seen: {},             // 문항별 결과 기록 (뒤로 갔다 와도 유지)
+    stats: { right: 0, wrong: 0 }
+  };
 
   function studyPool() {
     return QUESTIONS.filter(function (q) {
@@ -792,57 +801,74 @@
     });
   }
 
-  function studyReload(keepIdx) {
-    study.list = shuffle(studyPool());
-    study.idx = keepIdx ? Math.min(study.idx, Math.max(0, study.list.length - 1)) : 0;
-    study.hint = false;
-    study.reveal = false;
+  function studyReload() {
+    // 선지 순서를 섞어 위치를 외우지 못하게 한다
+    study.list = shuffle(studyPool()).map(function (q) {
+      if (q.type !== 'mc') return q;
+      var order = shuffle(q.choices.map(function (_, i) { return i; }));
+      return {
+        id: q.id, type: 'mc', unit: q.unit, source: q.source, question: q.question,
+        image: q.image || null,
+        choices: order.map(function (i) { return q.choices[i]; }),
+        answer: order.indexOf(q.answer),
+        explanation: q.explanation
+      };
+    });
+    study.idx = 0;
+    study.seen = {};
+    study.stats = { right: 0, wrong: 0 };
+    loadStudySlot();
+  }
+
+  // 현재 문항의 상태를 seen에서 복원 (이전/다음으로 오갈 때)
+  function loadStudySlot() {
+    var rec = study.seen[study.idx];
+    study.mine = rec ? rec.mine : undefined;
+    study.checked = !!rec;
+    study.correct = rec ? rec.correct : null;
+    study.gaveUp = rec ? rec.gaveUp : false;
     renderStudy();
   }
 
-  // 힌트는 답을 바로 주지 않는다. 객관식은 오답 2개를 지우고,
-  // 주관식은 출처와 글자 수·첫 글자만 알려준다.
-  function hintFor(q) {
-    if (q.type === 'mc') {
-      return '오답 ' + (q.choices.length === 2 ? 0 : 2) + '개를 지웠습니다. 남은 선지에서 고르세요.';
+  function studyCheck(gaveUp) {
+    var q = study.list[study.idx];
+    if (!q || study.checked) return;
+    var correct;
+    if (gaveUp) {
+      correct = false;
+    } else if (q.type === 'mc') {
+      if (study.mine === undefined) { alert('답을 선택해 주세요.'); return; }
+      correct = study.mine === q.answer;
+    } else {
+      if (!hasAnswer(q, study.mine)) { alert('답을 기입해 주세요.'); return; }
+      correct = gradeSA(q, study.mine);
     }
-    var labels = slotLabels(q);
-    var parts = (q.answerText || '').split(/\s*,\s*/);
-    var shape = [];
-    for (var s = 0; s < slotCount(q); s++) {
-      var raw = (parts[s] || '').replace(/^[㉠㉡㉢㉣]\s*/, '').trim();
-      var head = raw.slice(0, 1);
-      shape.push((slotCount(q) > 1 ? labels[s] + ' ' : '') +
-        (head ? head + '○'.repeat(Math.max(0, raw.length - 1)) : '?') +
-        ' (' + raw.length + '글자)');
-    }
-    return shape.join('   ');
-  }
-
-  // 객관식 힌트: 정답 외 선지 중 2개를 지운다(문항마다 같은 것이 지워지도록 고정)
-  function hiddenChoices(q) {
-    if (q.type !== 'mc' || q.choices.length !== 4) return {};
-    var wrong = [];
-    for (var i = 0; i < q.choices.length; i++) if (i !== q.answer) wrong.push(i);
-    var seed = 0;
-    for (var c = 0; c < q.id.length; c++) seed = (seed * 31 + q.id.charCodeAt(c)) >>> 0;
-    var out = {};
-    out[wrong[seed % wrong.length]] = true;
-    out[wrong[(seed + 1) % wrong.length]] = true;
-    return out;
+    study.checked = true;
+    study.correct = correct;
+    study.gaveUp = !!gaveUp;
+    study.seen[study.idx] = { mine: study.mine, correct: correct, gaveUp: !!gaveUp };
+    if (!gaveUp) study.stats[correct ? 'right' : 'wrong']++;
+    renderStudy();
   }
 
   function renderStudy() {
     var area = $('#study-area');
     area.innerHTML = '';
-    if (!study.list.length) {
+    var total = study.list.length;
+    $('#study-progress').textContent = total ? (study.idx + 1) + ' / ' + total : '0 / 0';
+    var st = study.stats;
+    $('#study-stats').innerHTML = (st.right || st.wrong)
+      ? '<span class="ok">맞음 ' + st.right + '</span> · <span class="no">틀림 ' + st.wrong + '</span>'
+      : '';
+
+    if (!total) {
       area.innerHTML = '<div class="paper qcard"><p class="qtext">조건에 맞는 문제가 없습니다.</p></div>';
-      $('#study-progress').textContent = '0 / 0';
+      $('#btn-check').disabled = true;
+      $('#btn-giveup').disabled = true;
       return;
     }
-    var q = study.list[study.idx];
-    $('#study-progress').textContent = (study.idx + 1) + ' / ' + study.list.length;
 
+    var q = study.list[study.idx];
     var card = document.createElement('div');
     card.className = 'paper qcard';
 
@@ -868,35 +894,58 @@
     }
 
     if (q.type === 'mc') {
-      var hidden = study.hint && !study.reveal ? hiddenChoices(q) : {};
       var wrap = document.createElement('div');
       wrap.className = 'choices';
       q.choices.forEach(function (c, ci) {
-        var b = document.createElement('div');
-        b.className = 'choice static' +
-          (hidden[ci] ? ' struck' : '') +
-          (study.reveal && ci === q.answer ? ' is-answer' : '');
+        var b = document.createElement('button');
+        b.type = 'button';
+        var cls = 'choice';
+        if (!study.checked) {
+          if (study.mine === ci) cls += ' selected';
+        } else {
+          cls += ' static';
+          if (ci === q.answer) cls += ' is-answer';
+          if (ci === study.mine && ci !== q.answer) cls += ' is-wrong';
+        }
+        b.className = cls;
         b.innerHTML = '<span class="num">' + CIRCLED[ci] + '</span><span>' + escapeHtml(c) + '</span>' +
-          (study.reveal && ci === q.answer ? '<span class="ans-mark">정답</span>' : '');
+          (study.checked && ci === q.answer ? '<span class="ans-mark ok">정답</span>' : '') +
+          (study.checked && ci === study.mine && ci !== q.answer ? '<span class="ans-mark no">내 선택</span>' : '');
+        if (!study.checked) {
+          b.addEventListener('click', function () {
+            study.mine = (study.mine === ci) ? undefined : ci;
+            renderStudy();
+          });
+        }
         wrap.appendChild(b);
       });
       card.appendChild(wrap);
-    } else if (study.reveal) {
-      var ans = document.createElement('p');
-      ans.className = 'rrow my-right study-answer';
-      ans.innerHTML = '<b>정답:</b> ' + escapeHtml(q.answerText);
-      card.appendChild(ans);
+    } else if (!study.checked) {
+      card.appendChild(buildAnswerBox(q, study.mine, function (vals) { study.mine = vals; }));
+    } else {
+      var labels = slotLabels(q);
+      var written = answerFields(q, study.mine).map(function (v, s) {
+        v = (v || '').trim();
+        if (!v) return null;
+        return (slotCount(q) > 1 ? labels[s] + ' ' : '') + v;
+      }).filter(Boolean);
+      var mineRow = document.createElement('p');
+      mineRow.className = 'rrow ' + (study.correct ? 'my-right' : 'my-wrong');
+      mineRow.innerHTML = '<b>내 답:</b> ' + (written.length ? escapeHtml(written.join('  /  ')) : '(미기입)');
+      card.appendChild(mineRow);
+      var ansRow = document.createElement('p');
+      ansRow.className = 'rrow study-answer';
+      ansRow.innerHTML = '<b>정답:</b> ' + escapeHtml(q.answerText);
+      card.appendChild(ansRow);
     }
 
-    if (study.hint && !study.reveal) {
-      var h = document.createElement('div');
-      h.className = 'study-hint';
-      h.innerHTML = '<b>힌트</b> ' + escapeHtml(hintFor(q)) +
-        (q.source ? '<span class="src">' + escapeHtml(q.source) + '</span>' : '');
-      card.appendChild(h);
-    }
+    if (study.checked) {
+      var v = document.createElement('div');
+      v.className = 'study-verdict ' + (study.correct ? 'ok' : 'no');
+      v.textContent = study.gaveUp ? '정답을 확인했습니다'
+        : (study.correct ? '⭕ 정답입니다' : '❌ 오답입니다');
+      card.insertBefore(v, card.firstChild.nextSibling);
 
-    if (study.reveal) {
       var ex = document.createElement('div');
       ex.className = 'expl';
       ex.textContent = q.explanation;
@@ -911,11 +960,11 @@
 
     area.appendChild(card);
 
-    $('#btn-hint').disabled = study.reveal;
-    $('#btn-hint').textContent = study.hint ? '💡 힌트 표시 중' : '💡 힌트 보기';
-    $('#btn-reveal').textContent = study.reveal ? '정답 숨기기' : '정답·해설 보기';
+    $('#btn-check').disabled = study.checked;
+    $('#btn-check').textContent = study.checked ? '채점 완료' : '정답 확인';
+    $('#btn-giveup').disabled = study.checked;
     $('#btn-study-prev').disabled = study.idx === 0;
-    $('#btn-study-next').disabled = study.idx >= study.list.length - 1;
+    $('#btn-study-next').disabled = study.idx >= total - 1;
   }
 
   function startStudy() {
@@ -927,9 +976,10 @@
       sel.innerHTML = '<option value="all">전체 단원</option>' +
         units.map(function (u) { return '<option value="' + escapeHtml(u) + '">' + escapeHtml(u) + '</option>'; }).join('');
     }
-    studyReload(false);
+    studyReload();
     show('screen-study');
   }
+
 
   /* ---------- 내 기록 ---------- */
 
@@ -1024,20 +1074,23 @@
     startStudy();
   });
   $('#btn-study-home').addEventListener('click', function () { renderHome(); show('screen-home'); });
-  $('#btn-study-shuffle').addEventListener('click', function () { studyReload(false); });
-  $('#study-unit').addEventListener('change', function () { study.unit = this.value; studyReload(false); });
-  $('#study-type').addEventListener('change', function () { study.type = this.value; studyReload(false); });
-  $('#btn-hint').addEventListener('click', function () { study.hint = !study.hint; renderStudy(); });
-  $('#btn-reveal').addEventListener('click', function () {
-    study.reveal = !study.reveal;
-    if (study.reveal) study.hint = false;
-    renderStudy();
-  });
+  $('#btn-study-shuffle').addEventListener('click', function () { studyReload(); });
+  $('#study-unit').addEventListener('change', function () { study.unit = this.value; studyReload(); });
+  $('#study-type').addEventListener('change', function () { study.type = this.value; studyReload(); });
+  $('#btn-check').addEventListener('click', function () { studyCheck(false); });
+  $('#btn-giveup').addEventListener('click', function () { studyCheck(true); });
   $('#btn-study-prev').addEventListener('click', function () {
-    if (study.idx > 0) { study.idx--; study.hint = false; study.reveal = false; renderStudy(); }
+    if (study.idx > 0) { study.idx--; loadStudySlot(); }
   });
   $('#btn-study-next').addEventListener('click', function () {
-    if (study.idx < study.list.length - 1) { study.idx++; study.hint = false; study.reveal = false; renderStudy(); }
+    if (study.idx < study.list.length - 1) { study.idx++; loadStudySlot(); }
+  });
+  // 학습 중 Enter — 채점 전이면 채점, 채점 후면 다음 문제
+  $('#screen-study').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (!study.checked) studyCheck(false);
+    else $('#btn-study-next').click();
   });
 
   $('#rank-tabs').addEventListener('click', function (e) {
