@@ -7,6 +7,7 @@
   var SA_COUNT = 4;
   var PHOTO_MC_MIN = 2;   // 시험당 사진 제시형 객관식 최소 보장
   var PHOTO_SA_MIN = 1;   // 시험당 사진 제시형 주관식 최소 보장
+  var OX_MAX = 3;         // 시험당 OX형 상한 (기출에서 OX는 소수)
   var POINT = 5;
   var PASS = 60;
   var LS_HISTORY = 'jewelry-exam-history-v1';
@@ -30,19 +31,40 @@
     return a;
   }
 
-  // 단원별로 골고루: 단원 그룹 셔플 후 라운드로빈
-  function sampleSpread(pool, n) {
+  // 정답 서명 — 같은 사실을 묻는 문항이 한 시험지에 함께 나오지 않도록 하는 열쇠.
+  // OX형(선지 2개)은 정답이 늘 "옳다/틀리다"라 서명이 무의미하므로 제외한다.
+  function answerSig(q) {
+    if (q.type === 'mc') {
+      if (!q.choices || q.choices.length !== 4) return null;
+      return 'a:' + normalizeSA(q.choices[q.answer]);
+    }
+    return 'a:' + normalizeSA(q.answerText || (q.accept && q.accept[0]) || '');
+  }
+
+  function isOX(q) { return q.type === 'mc' && q.choices && q.choices.length === 2; }
+
+  // 단원별로 골고루: 단원 그룹 셔플 후 라운드로빈.
+  // 정답이 겹치는 문항과, OX_MAX를 넘는 OX형은 뒤로 미룬다(모자라면 되돌려 채움).
+  function sampleSpread(pool, n, usedSigs, counters) {
     var byUnit = {};
     pool.forEach(function (q) { (byUnit[q.unit] = byUnit[q.unit] || []).push(q); });
     var groups = shuffle(Object.keys(byUnit)).map(function (u) { return shuffle(byUnit[u]); });
     var picked = [];
+    var skipped = [];
     var gi = 0;
     while (picked.length < n) {
       var remaining = groups.filter(function (g) { return g.length > 0; });
       if (!remaining.length) break;
-      picked.push(remaining[gi % remaining.length].pop());
+      var q = remaining[gi % remaining.length].pop();
       gi++;
+      var sig = answerSig(q);
+      if (sig && usedSigs[sig]) { skipped.push(q); continue; }
+      if (isOX(q) && counters.ox >= OX_MAX) { skipped.push(q); continue; }
+      if (sig) usedSigs[sig] = true;
+      if (isOX(q)) counters.ox++;
+      picked.push(q);
     }
+    while (picked.length < n && skipped.length) picked.push(skipped.pop());
     return picked;
   }
 
@@ -213,18 +235,38 @@
 
   /* ---------- 시험 생성 (사진 문항 보장) ---------- */
 
-  function pickWithPhotos(pool, total, photoMin) {
-    var photos = shuffle(pool.filter(function (q) { return q.image; })).slice(0, photoMin);
+  function pickWithPhotos(pool, total, photoMin, usedSigs, counters) {
+    // 사진 문항도 서명 검사를 거쳐야 한다. 앞서 뽑힌 문항과 정답이 같은 사진 문항은
+    // 뒤로 미루고, 개수가 모자랄 때만 되돌려 채운다.
+    var photoPool = shuffle(pool.filter(function (q) { return q.image; }));
+    var photos = [];
+    var deferred = [];
+    photoPool.forEach(function (q) {
+      if (photos.length >= photoMin) return;
+      var sig = answerSig(q);
+      if (sig && usedSigs[sig]) { deferred.push(q); return; }
+      photos.push(q);
+    });
+    while (photos.length < photoMin && deferred.length) photos.push(deferred.pop());
+
     var pickedIds = {};
-    photos.forEach(function (q) { pickedIds[q.id] = true; });
-    var rest = sampleSpread(pool.filter(function (q) { return !pickedIds[q.id]; }), total - photos.length);
+    photos.forEach(function (q) {
+      pickedIds[q.id] = true;
+      var sig = answerSig(q);
+      if (sig) usedSigs[sig] = true;
+    });
+    var rest = sampleSpread(
+      pool.filter(function (q) { return !pickedIds[q.id]; }),
+      total - photos.length, usedSigs, counters);
     return shuffle(photos.concat(rest));
   }
 
   function buildExam() {
+    var usedSigs = {};   // 객관식·주관식이 서명을 공유해야 "정의 문항"이 양쪽에 겹치지 않는다
+    var counters = { ox: 0 };
     var mcPool = QUESTIONS.filter(function (q) { return q.type === 'mc'; });
     var saPool = QUESTIONS.filter(function (q) { return q.type === 'sa'; });
-    var mc = pickWithPhotos(mcPool, MC_COUNT, PHOTO_MC_MIN).map(function (q) {
+    var mc = pickWithPhotos(mcPool, MC_COUNT, PHOTO_MC_MIN, usedSigs, counters).map(function (q) {
       var order = shuffle(q.choices.map(function (_, i) { return i; }));
       return {
         id: q.id, type: 'mc', unit: q.unit, source: q.source, question: q.question,
@@ -234,7 +276,7 @@
         explanation: q.explanation
       };
     });
-    var sa = pickWithPhotos(saPool, SA_COUNT, PHOTO_SA_MIN).map(function (q) {
+    var sa = pickWithPhotos(saPool, SA_COUNT, PHOTO_SA_MIN, usedSigs, counters).map(function (q) {
       return {
         id: q.id, type: 'sa', unit: q.unit, source: q.source, question: q.question,
         image: q.image || null,
@@ -407,8 +449,18 @@
   function gradeSA(q, userInput) {
     var u = normalizeSA(userInput);
     if (!u) return false;
+    // 복수답: 키워드를 긴 것부터 찾고 맞은 자리를 지워 나간다. 그냥 포함 여부만 보면
+    // "반강성포장" 한 단어가 키워드 '반강성'과 '강성'을 동시에 만족시켜 오답이 통과한다.
     if (q.keywords && q.keywords.length) {
-      return q.keywords.every(function (k) { return u.indexOf(normalizeSA(k)) !== -1; });
+      var rest = u;
+      var ks = q.keywords.map(normalizeSA).sort(function (a, b) { return b.length - a.length; });
+      return ks.every(function (k) {
+        if (!k) return true;
+        var at = rest.indexOf(k);
+        if (at === -1) return false;
+        rest = rest.slice(0, at) + ' ' + rest.slice(at + k.length);
+        return true;
+      });
     }
     // 완전일치 또는 정답으로 시작하는 경우만 인정("코멕스(COMEX)", "루페입니다" 통과).
     // 중간 포함까지 허용하면 정답 "강성"이 오답 "반강성포장"을 통과시키므로 접두 일치까지만 둔다.
