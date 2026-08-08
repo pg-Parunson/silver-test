@@ -109,7 +109,26 @@ button { font-family: var(--sans); cursor: pointer; }
   border: 1px solid var(--line-dark); border-radius: 4px; padding: 12px 18px;
 }
 .btn-exam.big, .btn-line.big { width: 100%; padding: 15px; }
+.btn-exam.alt { background: var(--stamp-ink); border-color: var(--stamp-ink); }
 button:disabled { opacity: 0.35; cursor: default; }
+
+/* 시작 버튼 두 종 (전체 시험 / 주관식만) */
+.start-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.start-row .btn-exam { flex: 1 1 0; min-width: 130px; padding: 14px 10px; }
+.start-hint {
+  margin: 12px 0 0; font-family: var(--sans); font-size: 0.76rem;
+  line-height: 1.75; color: var(--ink-soft); text-align: center;
+}
+.start-hint b { color: var(--ink); font-weight: 700; }
+
+/* 순위표 유형 탭 */
+.rank-tabs { display: flex; gap: 6px; justify-content: center; margin: 8px 0 6px; }
+.rank-tab {
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 700;
+  border: 1px solid var(--line-dark); background: var(--paper); color: var(--ink-soft);
+  border-radius: 999px; padding: 5px 16px;
+}
+.rank-tab.is-on { background: var(--navy); border-color: var(--navy); color: #fff; }
 
 /* ── 순위판·기록 ── */
 .board { padding-top: 16px; }
@@ -138,7 +157,11 @@ button:disabled { opacity: 0.35; cursor: default; }
   display: flex; justify-content: space-between; align-items: center;
   border-bottom: 1px dashed var(--line); padding: 8px 2px; font-size: 0.9rem;
 }
-.history-list .h-score { font-weight: 800; }
+.history-list .h-score { font-weight: 800; display: flex; align-items: center; gap: 6px; }
+.history-list .h-mode {
+  font-size: 0.68rem; font-weight: 700; color: var(--ink-soft);
+  border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px;
+}
 .history-list .h-meta { color: var(--ink-soft); font-size: 0.8rem; }
 .history-list .pass { color: var(--green); }
 .history-list .fail { color: var(--red); }
@@ -209,7 +232,11 @@ button:disabled { opacity: 0.35; cursor: default; }
 
 /* ── 성적 통지표 ── */
 .report { text-align: center; padding-top: 26px; }
-.report-title { margin: 0 0 18px; font-size: 1.5rem; font-weight: 900; letter-spacing: 0.35em; }
+.report-title { margin: 0 0 6px; font-size: 1.5rem; font-weight: 900; letter-spacing: 0.35em; }
+.report-mode {
+  margin: 0 0 16px; font-family: var(--sans); font-size: 0.78rem;
+  font-weight: 700; color: var(--ink-soft); letter-spacing: 0.02em;
+}
 .report-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.9rem; margin-bottom: 12px; table-layout: fixed; }
 .report-table th, .report-table td { border: 1px solid var(--line-dark); padding: 10px 4px; word-break: keep-all; }
 .report-table th { background: #f1efe8; font-weight: 700; width: 22%; font-size: 0.8rem; white-space: nowrap; }

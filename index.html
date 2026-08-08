@@ -42,7 +42,14 @@
         <span class="name-in">(인)</span>
       </div>
 
-      <button id="btn-start" class="btn-exam">시험 시작</button>
+      <div class="start-row">
+        <button id="btn-start" class="btn-exam">시험 시작</button>
+        <button id="btn-start-sa" class="btn-exam alt">주관식만</button>
+      </div>
+      <p class="start-hint">
+        <b>시험 시작</b> — 객관식 16 + 주관식 4 (실제 시험과 동일)<br>
+        <b>주관식만</b> — 주관식 20문항 집중 연습
+      </p>
       <div class="stamp" aria-hidden="true">모의<br>평가</div>
 
       <p class="source-note">
@@ -55,6 +62,10 @@
 
     <div class="paper board">
       <h2 class="board-title">응시자 순위</h2>
+      <div class="rank-tabs" id="rank-tabs">
+        <button type="button" class="rank-tab is-on" data-mode="full">전체 시험</button>
+        <button type="button" class="rank-tab" data-mode="sa">주관식만</button>
+      </div>
       <p id="ranking-note" class="board-note"></p>
       <table class="rank-table">
         <colgroup><col class="c-rank"><col class="c-name"><col class="c-score"><col class="c-pass"><col class="c-when"><col class="c-cnt"></colgroup>
@@ -88,6 +99,7 @@
   <section id="screen-result" class="screen hidden">
     <div class="paper report">
       <h2 class="report-title">성 적 통 지 표</h2>
+      <p id="result-mode" class="report-mode"></p>
       <table class="report-table">
         <tr><th>성명</th><td id="result-name"></td><th>응시 일시</th><td id="result-date"></td></tr>
         <tr><th>점수</th><td id="result-score-cell"></td><th>판정</th><td id="result-pass-cell"></td></tr>
@@ -102,6 +114,7 @@
 
     <div class="paper board">
       <h2 class="board-title">응시자 순위</h2>
+      <p id="ranking-note-result" class="board-note"></p>
       <table class="rank-table">
         <colgroup><col class="c-rank"><col class="c-name"><col class="c-score"><col class="c-pass"><col class="c-when"><col class="c-cnt"></colgroup>
         <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>판정</th><th>최근 응시</th><th>횟수</th></tr></thead>
