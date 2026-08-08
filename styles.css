@@ -49,7 +49,7 @@ body {
 .cover-title { font-size: 2rem; font-weight: 900; letter-spacing: 0.06em; line-height: 1.35; margin: 0 0 22px; }
 
 .stamp {
-  position: absolute; bottom: 16px; right: 14px;
+  position: absolute; top: 14px; right: 12px;
   width: 66px; height: 66px; border-radius: 50%;
   border: 3px double var(--red); color: var(--red);
   display: flex; align-items: center; justify-content: center;
@@ -71,6 +71,17 @@ body {
 .cover-notice ol { margin: 0; padding-left: 20px; font-size: 0.86rem; }
 .cover-notice li { margin-bottom: 3px; }
 .cover-notice b { color: var(--red); }
+
+/* 표지 도장은 흐름 안에 두어 아래 출처 표기와 겹치지 않게 한다 */
+.cover .stamp { position: static; margin: 16px 6px 0 auto; }
+
+/* 출처 표기 — 학습모듈 저작권자(교육부) 명시 + 비공식 자료 고지 */
+.source-note {
+  margin: 24px 0 0; padding-top: 12px; border-top: 1px solid var(--line);
+  font-family: var(--sans); font-size: 0.71rem; line-height: 1.7;
+  color: var(--ink-soft); text-align: left; word-break: keep-all;
+}
+.source-note b { color: var(--ink); font-weight: 700; }
 
 .name-row {
   display: flex; align-items: center; justify-content: center; gap: 10px;
