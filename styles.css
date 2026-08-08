@@ -43,14 +43,14 @@ body {
 
 /* ── 표지 ── */
 .cover { padding-top: 30px; text-align: center; }
-.cover-super { margin: 0 auto; max-width: calc(100% - 88px); font-size: 0.84rem; letter-spacing: 0.14em; color: var(--ink-soft); font-weight: 600; }
+.cover-super { margin: 0; font-size: 0.82rem; letter-spacing: 0.12em; color: var(--ink-soft); font-weight: 600; }
 .cover-rule { width: 60px; border-bottom: 2px solid var(--line-dark); margin: 12px auto; }
 .cover-code { font-size: 0.72rem; color: var(--ink-soft); margin: 0 0 18px; font-family: var(--sans); }
 .cover-title { font-size: 2rem; font-weight: 900; letter-spacing: 0.06em; line-height: 1.35; margin: 0 0 22px; }
 
 .stamp {
-  position: absolute; top: 18px; right: 16px;
-  width: 74px; height: 74px; border-radius: 50%;
+  position: absolute; bottom: 16px; right: 14px;
+  width: 66px; height: 66px; border-radius: 50%;
   border: 3px double var(--red); color: var(--red);
   display: flex; align-items: center; justify-content: center;
   font-weight: 900; font-size: 0.95rem; line-height: 1.15; letter-spacing: 0.1em;
@@ -105,9 +105,16 @@ button:disabled { opacity: 0.35; cursor: default; }
   margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.2em; text-align: center;
 }
 .board-note { text-align: center; font-size: 0.75rem; color: var(--ink-soft); margin: 0 0 10px; font-family: var(--sans); }
-.rank-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.9rem; }
-.rank-table th, .rank-table td { border: 1px solid var(--line-dark); padding: 7px 4px; text-align: center; }
-.rank-table thead th { background: #f1efe8; font-weight: 700; font-size: 0.82rem; }
+.rank-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.82rem; table-layout: fixed; }
+.rank-table th, .rank-table td { border: 1px solid var(--line-dark); padding: 7px 2px; text-align: center; word-break: keep-all; }
+.rank-table thead th { background: #f1efe8; font-weight: 700; font-size: 0.72rem; }
+.rank-table col.c-rank { width: 12%; }
+.rank-table col.c-name { width: 20%; }
+.rank-table col.c-score { width: 16%; }
+.rank-table col.c-pass { width: 17%; }
+.rank-table col.c-when { width: 23%; }
+.rank-table col.c-cnt { width: 12%; }
+.rank-table .r-when { font-size: 0.76rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .rank-table .empty { color: var(--ink-soft); padding: 16px 0; }
 .rank-table .r-first td { background: #fdf6df; font-weight: 700; }
 .rank-table .r-me td { background: var(--navy-soft); }

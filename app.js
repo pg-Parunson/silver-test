@@ -75,6 +75,18 @@
     return d.getFullYear() + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
 
+  // 순위표용 압축 표기: 올해면 "8.7 22:42", 지난해면 "25.12.31"
+  function fmtDateShort(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '-';
+    var p = function (n) { return n < 10 ? '0' + n : n; };
+    if (d.getFullYear() !== new Date().getFullYear()) {
+      return String(d.getFullYear()).slice(2) + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+    }
+    return (d.getMonth() + 1) + '.' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
   var CIRCLED = ['①', '②', '③', '④', '⑤'];
 
   function show(id) {
@@ -176,7 +188,7 @@
     return Ranking.fetch().then(function (rows) {
       tbody.innerHTML = '';
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty">아직 응시 기록이 없습니다</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">아직 응시 기록이 없습니다</td></tr>';
         return;
       }
       rows.forEach(function (r, i) {
@@ -189,11 +201,13 @@
           '<td>' + escapeHtml(r.name_masked) + '</td>' +
           '<td>' + r.score + '점</td>' +
           '<td class="' + (pass ? 'pass' : 'fail') + '">' + (pass ? '합격' : '불합격') + '</td>' +
+          '<td class="r-when" title="' + escapeHtml(r.updated_at ? fmtDate(r.updated_at) : '') + '">' +
+            fmtDateShort(r.updated_at) + '</td>' +
           '<td>' + (r.attempts || 1) + '회</td>';
         tbody.appendChild(tr);
       });
     }).catch(function () {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty">순위를 불러오지 못했습니다</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">순위를 불러오지 못했습니다</td></tr>';
     });
   }
 
@@ -396,9 +410,11 @@
     if (q.keywords && q.keywords.length) {
       return q.keywords.every(function (k) { return u.indexOf(normalizeSA(k)) !== -1; });
     }
+    // 완전일치 또는 정답으로 시작하는 경우만 인정("코멕스(COMEX)", "루페입니다" 통과).
+    // 중간 포함까지 허용하면 정답 "강성"이 오답 "반강성포장"을 통과시키므로 접두 일치까지만 둔다.
     return (q.accept || []).some(function (a) {
       var n = normalizeSA(a);
-      return n === u || (n.length >= 2 && u.indexOf(n) !== -1);
+      return n.length > 0 && (n === u || u.indexOf(n) === 0);
     });
   }
 

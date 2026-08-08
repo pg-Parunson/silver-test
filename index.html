@@ -50,8 +50,9 @@
       <h2 class="board-title">응시자 순위</h2>
       <p id="ranking-note" class="board-note"></p>
       <table class="rank-table">
-        <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>판정</th><th>응시</th></tr></thead>
-        <tbody id="ranking-body"><tr><td colspan="5" class="empty">아직 응시 기록이 없습니다</td></tr></tbody>
+        <colgroup><col class="c-rank"><col class="c-name"><col class="c-score"><col class="c-pass"><col class="c-when"><col class="c-cnt"></colgroup>
+        <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>판정</th><th>최근 응시</th><th>횟수</th></tr></thead>
+        <tbody id="ranking-body"><tr><td colspan="6" class="empty">아직 응시 기록이 없습니다</td></tr></tbody>
       </table>
     </div>
 
@@ -92,7 +93,8 @@
     <div class="paper board">
       <h2 class="board-title">응시자 순위</h2>
       <table class="rank-table">
-        <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>판정</th><th>응시</th></tr></thead>
+        <colgroup><col class="c-rank"><col class="c-name"><col class="c-score"><col class="c-pass"><col class="c-when"><col class="c-cnt"></colgroup>
+        <thead><tr><th>순위</th><th>성명</th><th>점수</th><th>판정</th><th>최근 응시</th><th>횟수</th></tr></thead>
         <tbody id="ranking-body-result"></tbody>
       </table>
     </div>
