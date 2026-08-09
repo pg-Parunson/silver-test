@@ -203,6 +203,30 @@ button:disabled { opacity: 0.35; cursor: default; }
 .rank-table .pass { color: var(--green); font-weight: 700; }
 .rank-table .fail { color: var(--red); font-weight: 700; }
 
+/* ── 학습 자료실 ── */
+.files { list-style: none; margin: 0; padding: 0; }
+.files li { border-top: 1px dashed var(--line); padding: 12px 2px 10px; }
+.files li:first-child { border-top: none; }
+.files a {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  text-decoration: none; color: var(--navy); font-family: var(--sans);
+}
+.files a:hover .f-name { text-decoration: underline; }
+.files .f-name { font-weight: 700; font-size: 0.95rem; }
+.files .f-name b { color: var(--stamp-ink); }
+.files .f-meta { font-size: 0.74rem; color: var(--ink-soft); margin-left: auto; white-space: nowrap; }
+.files .f-desc {
+  margin: 4px 0 0; font-family: var(--sans); font-size: 0.78rem;
+  color: var(--ink-soft); line-height: 1.6; word-break: keep-all;
+}
+.files-credit {
+  margin: 14px 0 0; padding-top: 10px; border-top: 1px solid var(--line);
+  font-family: var(--sans); font-size: 0.7rem; line-height: 1.7;
+  color: var(--ink-soft); word-break: keep-all;
+}
+.files-credit b { color: var(--ink); }
+.files-credit a { color: var(--navy); }
+
 .history-list { list-style: none; margin: 0; padding: 0; font-family: var(--sans); }
 .history-list li {
   display: flex; justify-content: space-between; align-items: center;
