@@ -16,10 +16,14 @@
   <!-- ── 표지 (홈) ── -->
   <section id="screen-home" class="screen">
     <div class="paper cover">
+      <div class="subject-tabs" id="subject-tabs">
+        <button type="button" class="subject-tab is-on" data-subject="jewelry">주얼리 제품 관리</button>
+        <button type="button" class="subject-tab" data-subject="metalwork">귀금속가공기능사</button>
+      </div>
       <p class="cover-super">국가직무능력표준(NCS) 과정평가 대비</p>
       <div class="cover-rule"></div>
-      <p class="cover-code">대분류 인쇄·목재·가구·공예 · 소분류 귀금속·보석 · 능력단위 주얼리 제품 관리 (LM2202020611_16v3)</p>
-      <h1 class="cover-title">주얼리 제품 관리<br>모의평가 문제지</h1>
+      <p class="cover-code" id="cover-code"></p>
+      <h1 class="cover-title" id="cover-title"></h1>
 
       <table class="cover-info">
         <tr><th>시험 시간</th><td>60분</td><th>문항 수</th><td>20문항</td></tr>
@@ -50,15 +54,22 @@
       <p class="start-hint">
         <b>시험 시작</b> — 객관식 16 + 주관식 4 (실제 시험과 동일)<br>
         <b>주관식만</b> — 주관식 20문항 집중 연습<br>
-        <b>학습 시작</b> — 시간·점수 없이 224문항을 힌트·해설과 함께
+        <b>학습 시작</b> — 시간·점수 없이 <span id="hint-count">전 문항</span>을 해설과 함께
       </p>
       <div class="stamp" aria-hidden="true">모의<br>평가</div>
 
-      <p class="source-note">
+      <p class="source-note" id="source-note-jewelry">
         본 문항은 <b>교육부</b>가 저작권을 보유한 NCS 학습모듈
         「주얼리 제품 관리」(LM2202020611_16v3, 연구기관 한국직업능력개발원, 2018.12.31.)를
         바탕으로 자체 제작한 연습 문항입니다.<br>
         교육부·한국직업능력개발원 및 시행기관과 무관한 <b>개인 학습용 자료</b>이며, 실제 시험 문제가 아닙니다.
+      </p>
+
+      <p class="source-note hidden" id="source-note-metalwork">
+        본 문항은 <b>귀금속가공기능사 과정평가형</b> 필기 평가의 7개 능력단위
+        (왁스카빙·조립가공·가공안전관리·펜던트세공·기초조각·솔더링/버프연마·주얼리 제품 관리)
+        요점을 바탕으로 자체 제작한 연습 문항입니다.<br>
+        시행기관과 무관한 <b>개인 학습용 자료</b>이며, 실제 시험 문제가 아닙니다.
       </p>
     </div>
 
@@ -76,7 +87,7 @@
       </table>
     </div>
 
-    <div class="paper board">
+    <div class="paper board" id="files-section">
       <h2 class="board-title">학 습 자 료</h2>
       <p class="board-note">교육부가 무료로 공개한 NCS 학습모듈 원문입니다</p>
       <ul class="files">
@@ -182,6 +193,7 @@
 </div>
 <script src="config.js"></script>
 <script src="questions.js"></script>
+<script src="questions-metalwork.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -16,10 +16,58 @@
   };
   var DEFAULT_MODE = 'full';
   function modeOf(k) { return MODES[k] || MODES[DEFAULT_MODE]; }
+
+  /* ---------- 과목 ----------
+   * 과목마다 문제은행이 따로 있고 순위표도 따로 쌓인다.
+   * 'jewelry'는 첫 시험이라 순위 키에 접두어가 없다 — 기존 응시 기록을 지키기 위해서다.
+   * 새 과목은 rankKey 접두어를 붙여 다른 행으로 들어간다.
+   */
+  var SUBJECTS = {
+    jewelry: {
+      key: 'jewelry', label: '주얼리 제품 관리', short: '주얼리',
+      bank: 'QUESTIONS', rankKey: '',       // 접두어 없음 = 기존 기록 유지
+      code: '대분류 인쇄·목재·가구·공예 · 소분류 귀금속·보석 · 능력단위 주얼리 제품 관리 (LM2202020611_16v3)',
+      title: '주얼리 제품 관리<br>모의평가 문제지',
+      note: 'source-note-jewelry',
+      files: true
+    },
+    metalwork: {
+      key: 'metalwork', label: '귀금속가공기능사', short: '귀금속',
+      bank: 'QUESTIONS_METALWORK', rankKey: 'mw',
+      code: '과정평가형 필기 · 왁스카빙 · 조립가공 · 가공안전관리 · 펜던트세공 · 기초조각 · 솔더링/버프연마 · 주얼리 제품 관리',
+      title: '귀금속가공기능사<br>모의평가 문제지',
+      note: 'source-note-metalwork',
+      files: false
+    }
+  };
+  var DEFAULT_SUBJECT = 'jewelry';
+  function subjectOf(k) { return SUBJECTS[k] || SUBJECTS[DEFAULT_SUBJECT]; }
+
+  /** 지금 과목의 문제은행 (없으면 빈 배열) */
+  function bankOf(subjectKey) {
+    var b = window[subjectOf(subjectKey).bank];
+    return Array.isArray(b) ? b : [];
+  }
+  /** 순위표에서 과목+유형을 구분하는 키 */
+  function rankMode(subjectKey, modeKey) {
+    var p = subjectOf(subjectKey).rankKey;
+    return p ? p + '-' + modeOf(modeKey).key : modeOf(modeKey).key;
+  }
+  // 서버로 나가는 mode 값은 이 목록 안에서만 허용한다.
+  // modeOf()로 걸러선 안 된다 — 'mw-full' 같은 키가 'full'로 뭉개져 과목이 섞인다.
+  var RANK_MODES = (function () {
+    var out = {};
+    Object.keys(SUBJECTS).forEach(function (sk) {
+      Object.keys(MODES).forEach(function (mk) { out[rankMode(sk, mk)] = true; });
+    });
+    return out;
+  })();
+  function normRankMode(m) { return RANK_MODES[m] ? m : DEFAULT_MODE; }
   var LS_HISTORY = 'jewelry-exam-history-v1';
   var LS_INPROGRESS = 'jewelry-exam-inprogress-v3';   // v3: 주관식 답안이 배열
   var LS_NAME = 'jewelry-exam-name-v1';
   var LS_RANKING = 'jewelry-exam-ranking-v1';
+  var LS_SUBJECT = 'jewelry-exam-subject-v1';
 
   var $ = function (sel) { return document.querySelector(sel); };
 
@@ -189,7 +237,7 @@
     // 재응시 시 점수는 최신 점수로 갱신 (같은 이름이라도 모드가 다르면 별도 행)
     submit: function (name, score, durationMs, mode) {
       var masked = maskName(name);
-      mode = modeOf(mode).key;
+      mode = normRankMode(mode);
       return nameKey(name, mode).then(function (id) {
         if (CFG) {
           var url = CFG.url + '/rest/v1/rankings';
@@ -229,7 +277,7 @@
     },
 
     fetch: function (mode) {
-      mode = modeOf(mode).key;
+      mode = normRankMode(mode);
       if (CFG) {
         var headers = { 'apikey': CFG.anonKey, 'Authorization': 'Bearer ' + CFG.anonKey };
         return fetch(CFG.url + '/rest/v1/rankings?select=id,name_masked,score,attempts,updated_at'
@@ -306,15 +354,16 @@
     return shuffle(photos.concat(rest));
   }
 
-  function buildExam(modeKey) {
+  function buildExam(modeKey, subjectKey) {
     var m = modeOf(modeKey);
+    var BANK = bankOf(subjectKey);
     var usedSigs = {};   // 객관식·주관식이 서명을 공유해야 "정의 문항"이 양쪽에 겹치지 않는다
     var counters = { ox: 0 };
     var mc = [];
     var sa = [];
 
     if (m.mc > 0) {
-      var mcPool = QUESTIONS.filter(function (q) { return q.type === 'mc'; });
+      var mcPool = BANK.filter(function (q) { return q.type === 'mc'; });
       mc = pickWithPhotos(mcPool, m.mc, m.photoMc, usedSigs, counters).map(function (q) {
         var order = shuffle(q.choices.map(function (_, i) { return i; }));
         return {
@@ -327,7 +376,7 @@
       });
     }
     if (m.sa > 0) {
-      var saPool = QUESTIONS.filter(function (q) { return q.type === 'sa'; });
+      var saPool = BANK.filter(function (q) { return q.type === 'sa'; });
       sa = pickWithPhotos(saPool, m.sa, m.photoSa, usedSigs, counters).map(function (q) {
         return {
           id: q.id, type: 'sa', unit: q.unit, source: q.source, question: q.question,
@@ -340,10 +389,11 @@
     return mc.concat(sa); // 전체 시험은 1~16 객관식 / 17~20 주관식
   }
 
-  function startExam(saved, modeKey) {
+  function startExam(saved, modeKey, subjectKey) {
     if (saved) {
       state = saved;
-      if (!state.mode) state.mode = DEFAULT_MODE;   // 모드 도입 전 저장분 호환
+      if (!state.mode) state.mode = DEFAULT_MODE;         // 모드 도입 전 저장분 호환
+      if (!state.subject) state.subject = DEFAULT_SUBJECT; // 과목 도입 전 저장분 호환
     } else {
       var name = normName($('#input-name').value);
       if (!name) {
@@ -355,7 +405,8 @@
       state = {
         name: name,
         mode: modeOf(modeKey).key,
-        questions: buildExam(modeKey),
+        subject: subjectOf(subjectKey).key,
+        questions: buildExam(modeKey, subjectKey),
         answers: {},
         selfGrade: {},
         idx: 0,
@@ -574,10 +625,12 @@
 
     // 단답: 완전일치 또는 정답으로 시작하는 경우만 인정("코멕스(COMEX)", "루페입니다" 통과).
     // 중간 포함까지 허용하면 정답 "강성"이 오답 "반강성포장"을 통과시키므로 접두 일치까지만 둔다.
+    // 한 글자짜리 정답("4")은 접두를 열어 두면 "40", "4번" 따위가 다 통과하므로 완전일치만 본다.
     var u = vals[0];
     return !!u && (q.accept || []).some(function (a) {
       var n = normalizeSA(a);
-      return n.length > 0 && (n === u || u.indexOf(n) === 0);
+      if (!n.length) return false;
+      return n.length < 2 ? n === u : (n === u || u.indexOf(n) === 0);
     });
   }
 
@@ -604,6 +657,7 @@
     var record = {
       name: state.name,
       mode: modeOf(state.mode).key,
+      subject: subjectOf(state.subject).key,
       ts: Date.now(),
       durationMs: Math.min(Date.now() - state.startedAt, EXAM_MINUTES * 60 * 1000),
       auto: !!auto,
@@ -622,7 +676,7 @@
   }
 
   function pushRanking(record) {
-    var mode = modeOf(record.mode).key;
+    var mode = rankMode(record.subject, record.mode);
     Ranking.submit(record.name, scoreOf(record), record.durationMs, mode).then(function (res) {
       record.rankId = res && res.id;
       return renderRankingInto('ranking-body-result', record.rankId, mode);
@@ -633,7 +687,8 @@
       for (var i = 0; i < rows.length; i++) {
         if (rows[i].id === record.rankId) {
           $('#result-rank-line').innerHTML =
-            modeOf(mode).label + ' 응시자 ' + rows.length + '명 중 <b>' + (i + 1) + '위</b>' +
+            subjectOf(record.subject).short + ' ' + modeOf(record.mode).label +
+            ' 응시자 ' + rows.length + '명 중 <b>' + (i + 1) + '위</b>' +
             (i === 0 ? ' 🏆' : '');
           break;
         }
@@ -657,8 +712,10 @@
     var m = modeOf(record.mode);
 
     $('#result-mode').textContent =
-      m.key === 'sa' ? '주관식만 · 주관식 20문항' : '전체 시험 · 객관식 16 + 주관식 4';
-    $('#ranking-note-result').textContent = m.label + ' 순위';
+      subjectOf(record.subject).label + ' · ' +
+      (m.key === 'sa' ? '주관식만 · 주관식 20문항' : '전체 시험 · 객관식 16 + 주관식 4');
+    $('#ranking-note-result').textContent =
+      subjectOf(record.subject).short + ' ' + m.label + ' 순위';
     $('#result-name').textContent = record.name;
     $('#result-date').textContent = fmtDate(record.ts) + (record.auto ? ' (시간 종료)' : '');
     $('#result-score-cell').innerHTML = score + '<span class="of">/100</span>';
@@ -784,7 +841,7 @@
   // 직접 풀고 바로 채점받는 방식. 시간·랭킹 없음.
 
   var study = {
-    list: [], idx: 0, unit: 'all', type: 'all',
+    list: [], idx: 0, unit: 'all', type: 'all', subject: DEFAULT_SUBJECT,
     mine: undefined,      // 지금 문제에 쓴 답
     checked: false,       // 채점했는가
     correct: null,        // 채점 결과
@@ -794,7 +851,7 @@
   };
 
   function studyPool() {
-    return QUESTIONS.filter(function (q) {
+    return bankOf(study.subject).filter(function (q) {
       if (study.unit !== 'all' && q.unit !== study.unit) return false;
       if (study.type !== 'all' && q.type !== study.type) return false;
       return true;
@@ -969,12 +1026,16 @@
 
   function startStudy() {
     var sel = $('#study-unit');
-    if (!sel.options.length) {
+    // 단원 목록은 과목마다 다르다 — 과목이 바뀌면 다시 채우고 필터도 초기화한다.
+    if (sel.getAttribute('data-subject') !== study.subject) {
       var units = [];
-      QUESTIONS.forEach(function (q) { if (units.indexOf(q.unit) === -1) units.push(q.unit); });
+      bankOf(study.subject).forEach(function (q) { if (units.indexOf(q.unit) === -1) units.push(q.unit); });
       units.sort();
       sel.innerHTML = '<option value="all">전체 단원</option>' +
         units.map(function (u) { return '<option value="' + escapeHtml(u) + '">' + escapeHtml(u) + '</option>'; }).join('');
+      sel.setAttribute('data-subject', study.subject);
+      sel.value = 'all';
+      study.unit = 'all';
     }
     studyReload();
     show('screen-study');
@@ -993,6 +1054,7 @@
       ts: record.ts,
       name: record.name,
       mode: modeOf(record.mode).key,
+      subject: subjectOf(record.subject).key,
       score: scoreOf(record),
       durationMs: record.durationMs,
       auto: record.auto,
@@ -1012,25 +1074,55 @@
     }
   }
 
-  var homeRankMode = DEFAULT_MODE;   // 홈 순위표에서 보고 있는 탭
+  var homeRankMode = DEFAULT_MODE;         // 홈 순위표에서 보고 있는 유형 탭
+  var homeSubject = DEFAULT_SUBJECT;       // 홈에서 고른 과목
+
+  try {
+    var savedSubject = localStorage.getItem(LS_SUBJECT);
+    if (savedSubject && SUBJECTS[savedSubject]) homeSubject = savedSubject;
+  } catch (e) {}
 
   function renderHomeRanking() {
     var m = modeOf(homeRankMode);
     $('#ranking-note').textContent =
       (CFG ? '모든 응시자 공유 순위' : '이 기기의 응시 기록 기준') +
+      ' · ' + subjectOf(homeSubject).short +
       ' · ' + (m.key === 'sa' ? '주관식 20문항' : '객관식 16 + 주관식 4') +
       ' · 재응시 시 최신 점수로 갱신';
     Array.prototype.forEach.call($('#rank-tabs').children, function (b) {
       b.classList.toggle('is-on', b.getAttribute('data-mode') === m.key);
     });
-    return renderRankingInto('ranking-body', null, m.key);
+    return renderRankingInto('ranking-body', null, rankMode(homeSubject, m.key));
+  }
+
+  // 표지·자료실·순위표를 고른 과목으로 갈아끼운다.
+  function renderSubject() {
+    var s = subjectOf(homeSubject);
+    var n = bankOf(homeSubject).length;
+
+    Array.prototype.forEach.call($('#subject-tabs').children, function (b) {
+      b.classList.toggle('is-on', b.getAttribute('data-subject') === s.key);
+    });
+    $('#cover-code').textContent = s.code;
+    $('#cover-title').innerHTML = s.title;
+    $('#hint-count').textContent = n ? n + '문항' : '전 문항';
+    document.title = s.label + ' 모의평가';
+
+    Object.keys(SUBJECTS).forEach(function (k) {
+      var el = document.getElementById(SUBJECTS[k].note);
+      if (el) el.classList.toggle('hidden', k !== s.key);
+    });
+    $('#files-section').classList.toggle('hidden', !s.files);
   }
 
   function renderHome() {
     try { $('#input-name').value = localStorage.getItem(LS_NAME) || ''; } catch (e) {}
+    renderSubject();
     renderHomeRanking();
 
-    var h = loadHistory();
+    var h = loadHistory().filter(function (x) {
+      return subjectOf(x.subject).key === homeSubject;
+    });
     var sec = $('#history-section');
     var ul = $('#history-list');
     ul.innerHTML = '';
@@ -1050,28 +1142,40 @@
   /* ---------- 이벤트 ---------- */
 
   function tryStart(modeKey) {
-    if (typeof QUESTIONS === 'undefined' || !QUESTIONS.length) {
-      alert('문제은행이 아직 준비되지 않았습니다.');
+    var bank = bankOf(homeSubject);
+    if (!bank.length) {
+      alert(subjectOf(homeSubject).label + ' 문제은행이 아직 준비되지 않았습니다.');
       return;
     }
     var m = modeOf(modeKey);
-    var pool = QUESTIONS.filter(function (q) { return q.type === 'sa'; }).length;
+    var pool = bank.filter(function (q) { return q.type === 'sa'; }).length;
     if (m.key === 'sa' && pool < m.sa) {
       alert('주관식 문항이 ' + pool + '개뿐이라 ' + m.sa + '문항 시험을 만들 수 없습니다.');
       return;
     }
-    startExam(null, m.key);
+    startExam(null, m.key, homeSubject);
   }
 
   $('#btn-start').addEventListener('click', function () { tryStart('full'); });
   $('#btn-start-sa').addEventListener('click', function () { tryStart('sa'); });
 
   $('#btn-study').addEventListener('click', function () {
-    if (typeof QUESTIONS === 'undefined' || !QUESTIONS.length) {
-      alert('문제은행이 아직 준비되지 않았습니다.');
+    if (!bankOf(homeSubject).length) {
+      alert(subjectOf(homeSubject).label + ' 문제은행이 아직 준비되지 않았습니다.');
       return;
     }
+    study.subject = homeSubject;
     startStudy();
+  });
+
+  $('#subject-tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('.subject-tab');
+    if (!b) return;
+    var k = b.getAttribute('data-subject');
+    if (!SUBJECTS[k] || k === homeSubject) return;
+    homeSubject = k;
+    try { localStorage.setItem(LS_SUBJECT, k); } catch (err) {}
+    renderHome();
   });
   $('#btn-study-home').addEventListener('click', function () { renderHome(); show('screen-home'); });
   $('#btn-study-shuffle').addEventListener('click', function () { studyReload(); });
@@ -1120,6 +1224,7 @@
   $('#btn-submit-top').addEventListener('click', function () { submitExam(false); });
   $('#btn-retry').addEventListener('click', function () {
     var again = state && state.record ? modeOf(state.record.mode).key : DEFAULT_MODE;
+    if (state && state.record) homeSubject = subjectOf(state.record.subject).key;
     renderHome();
     show('screen-home');
     tryStart(again);   // 방금 본 유형으로 다시
@@ -1132,7 +1237,7 @@
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem(LS_INPROGRESS)); } catch (e) {}
     if (saved && saved.deadline > Date.now() && saved.name) {
-      var savedLabel = modeOf(saved.mode).label;
+      var savedLabel = subjectOf(saved.subject).short + ' ' + modeOf(saved.mode).label;
       if (confirm(saved.name + '님, 진행 중이던 ' + savedLabel + '이 있습니다. 이어서 응시할까요?\n(취소하면 기록 없이 폐기됩니다)')) {
         startExam(saved);
         return;
