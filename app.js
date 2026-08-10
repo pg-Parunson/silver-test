@@ -29,7 +29,8 @@
       code: '대분류 인쇄·목재·가구·공예 · 소분류 귀금속·보석 · 능력단위 주얼리 제품 관리 (LM2202020611_16v3)',
       title: '주얼리 제품 관리<br>모의평가 문제지',
       note: 'source-note-jewelry',
-      files: true
+      files: true,
+      hidden: true      // 시험이 끝나 표지에서 내림. 문제·순위 기록은 그대로 남아 있다.
     },
     metalwork: {
       key: 'metalwork', label: '귀금속가공기능사', short: '귀금속',
@@ -40,8 +41,18 @@
       files: false
     }
   };
+  // 과목 필드가 없던 옛 기록을 되돌리는 호환 열쇠. 표지에 무엇을 띄울지와는 별개다.
   var DEFAULT_SUBJECT = 'jewelry';
   function subjectOf(k) { return SUBJECTS[k] || SUBJECTS[DEFAULT_SUBJECT]; }
+
+  function visibleSubjects() {
+    return Object.keys(SUBJECTS).filter(function (k) { return !SUBJECTS[k].hidden; });
+  }
+  // 표지가 여는 과목 — 감춘 과목은 고를 수 없다.
+  var HOME_SUBJECT = visibleSubjects()[0] || DEFAULT_SUBJECT;
+  function visibleSubjectOf(k) {
+    return (SUBJECTS[k] && !SUBJECTS[k].hidden) ? k : HOME_SUBJECT;
+  }
 
   /** 지금 과목의 문제은행 (없으면 빈 배열) */
   function bankOf(subjectKey) {
@@ -1075,11 +1086,13 @@
   }
 
   var homeRankMode = DEFAULT_MODE;         // 홈 순위표에서 보고 있는 유형 탭
-  var homeSubject = DEFAULT_SUBJECT;       // 홈에서 고른 과목
+  var homeSubject = HOME_SUBJECT;          // 홈에서 고른 과목
 
   try {
     var savedSubject = localStorage.getItem(LS_SUBJECT);
-    if (savedSubject && SUBJECTS[savedSubject]) homeSubject = savedSubject;
+    if (savedSubject && SUBJECTS[savedSubject] && !SUBJECTS[savedSubject].hidden) {
+      homeSubject = savedSubject;
+    }
   } catch (e) {}
 
   function renderHomeRanking() {
@@ -1100,9 +1113,13 @@
     var s = subjectOf(homeSubject);
     var n = bankOf(homeSubject).length;
 
-    Array.prototype.forEach.call($('#subject-tabs').children, function (b) {
-      b.classList.toggle('is-on', b.getAttribute('data-subject') === s.key);
+    var tabs = $('#subject-tabs');
+    Array.prototype.forEach.call(tabs.children, function (b) {
+      var k = b.getAttribute('data-subject');
+      b.classList.toggle('hidden', !!(SUBJECTS[k] && SUBJECTS[k].hidden));
+      b.classList.toggle('is-on', k === s.key);
     });
+    tabs.classList.toggle('hidden', visibleSubjects().length < 2);
     $('#cover-code').textContent = s.code;
     $('#cover-title').innerHTML = s.title;
     $('#hint-count').textContent = n ? n + '문항' : '전 문항';
@@ -1172,7 +1189,7 @@
     var b = e.target.closest('.subject-tab');
     if (!b) return;
     var k = b.getAttribute('data-subject');
-    if (!SUBJECTS[k] || k === homeSubject) return;
+    if (!SUBJECTS[k] || SUBJECTS[k].hidden || k === homeSubject) return;
     homeSubject = k;
     try { localStorage.setItem(LS_SUBJECT, k); } catch (err) {}
     renderHome();
@@ -1224,10 +1241,19 @@
   $('#btn-submit-top').addEventListener('click', function () { submitExam(false); });
   $('#btn-retry').addEventListener('click', function () {
     var again = state && state.record ? modeOf(state.record.mode).key : DEFAULT_MODE;
-    if (state && state.record) homeSubject = subjectOf(state.record.subject).key;
+    var sub = state && state.record ? subjectOf(state.record.subject).key : homeSubject;
+    // 방금 본 과목이 표지에서 내려간 과목이면 표지까지만 간다.
+    // 여기서 homeSubject 로 갈아타 버리면 응시자가 모르는 사이 다른 과목 시험이 시작되고,
+    // 그 점수가 그 과목 순위표의 기존 행을 덮어쓴다.
+    if (SUBJECTS[sub].hidden) {
+      renderHome();
+      show('screen-home');
+      return;
+    }
+    homeSubject = sub;
     renderHome();
     show('screen-home');
-    tryStart(again);   // 방금 본 유형으로 다시
+    tryStart(again);   // 방금 본 과목·유형으로 다시
   });
   $('#btn-home').addEventListener('click', function () { renderHome(); show('screen-home'); });
 
