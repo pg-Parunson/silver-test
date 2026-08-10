@@ -29,7 +29,7 @@
       code: '대분류 인쇄·목재·가구·공예 · 소분류 귀금속·보석 · 능력단위 주얼리 제품 관리 (LM2202020611_16v3)',
       title: '주얼리 제품 관리<br>모의평가 문제지',
       note: 'source-note-jewelry',
-      files: true,
+      files: true, filesDesc: '이 시험의 모든 문항이 나온 원본 교재',
       hidden: true      // 시험이 끝나 표지에서 내림. 문제·순위 기록은 그대로 남아 있다.
     },
     metalwork: {
@@ -38,7 +38,8 @@
       code: '과정평가형 필기 · 왁스카빙 · 조립가공 · 가공안전관리 · 펜던트세공 · 기초조각 · 솔더링/버프연마 · 주얼리 제품 관리',
       title: '귀금속가공기능사<br>모의평가 문제지',
       note: 'source-note-metalwork',
-      files: false
+      // 7개 능력단위 중 「주얼리 제품 관리」의 원본 교재라 이 과목에서도 쓸모가 있다.
+      files: true, filesDesc: '7개 능력단위 중 「주얼리 제품 관리」 50문항의 원본 교재'
     }
   };
   // 과목 필드가 없던 옛 기록을 되돌리는 호환 열쇠. 표지에 무엇을 띄울지와는 별개다.
@@ -246,7 +247,7 @@
 
   var Ranking = {
     // 재응시 시 점수는 최신 점수로 갱신 (같은 이름이라도 모드가 다르면 별도 행)
-    submit: function (name, score, durationMs, mode) {
+    submit: function (name, score, durationMs, mode, resubmit) {
       var masked = maskName(name);
       mode = normRankMode(mode);
       return nameKey(name, mode).then(function (id) {
@@ -260,7 +261,8 @@
           return fetch(url + '?id=eq.' + id + '&select=attempts', { headers: headers })
             .then(function (r) { return r.json(); })
             .then(function (rows) {
-              var attempts = (rows && rows[0] ? rows[0].attempts : 0) + 1;
+              var prevA = (rows && rows[0] ? rows[0].attempts : 0);
+              var attempts = resubmit ? (prevA || 1) : prevA + 1;
               return fetch(url, {
                 method: 'POST',
                 headers: Object.assign({ 'Prefer': 'resolution=merge-duplicates' }, headers),
@@ -279,7 +281,7 @@
         var prev = map[id];
         map[id] = {
           name_masked: masked, score: score, mode: mode,
-          attempts: (prev ? prev.attempts : 0) + 1,
+          attempts: resubmit ? ((prev && prev.attempts) || 1) : (prev ? prev.attempts : 0) + 1,
           duration_ms: durationMs, updated_at: new Date().toISOString()
         };
         try { localStorage.setItem(LS_RANKING, JSON.stringify(map)); } catch (e) {}
@@ -686,9 +688,10 @@
     return record.results.filter(function (r) { return r.correct; }).length * POINT;
   }
 
-  function pushRanking(record) {
+  /** resubmit: 자가채점으로 점수만 고쳐 다시 올리는 경우 — 응시 횟수는 그대로 둔다 */
+  function pushRanking(record, resubmit) {
     var mode = rankMode(record.subject, record.mode);
-    Ranking.submit(record.name, scoreOf(record), record.durationMs, mode).then(function (res) {
+    Ranking.submit(record.name, scoreOf(record), record.durationMs, mode, resubmit).then(function (res) {
       record.rankId = res && res.id;
       return renderRankingInto('ranking-body-result', record.rankId, mode);
     }).then(function () {
@@ -824,7 +827,7 @@
           r.selfGraded = true;
           updateHistoryLatest(record);
           renderResult(record);
-          pushRanking(record); // 갱신 점수 재제출
+          pushRanking(record, true); // 갱신 점수 재제출 — 응시 횟수는 그대로
         });
         sg.appendChild(btn);
         var note = document.createElement('span');
@@ -1130,6 +1133,7 @@
       if (el) el.classList.toggle('hidden', k !== s.key);
     });
     $('#files-section').classList.toggle('hidden', !s.files);
+    if (s.files && s.filesDesc) $('#files-desc').textContent = s.filesDesc;
   }
 
   function renderHome() {
