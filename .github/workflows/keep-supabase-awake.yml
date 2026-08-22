@@ -1,0 +1,35 @@
+# 순위표가 멈추지 않게 한다.
+#
+# 무료 플랜 Supabase 프로젝트는 일정 기간 요청이 없으면 스스로 잠들고,
+# 그러면 도메인이 아예 응답하지 않아 순위표가 통째로 죽는다(2026-08-22 실제로 겪음).
+# 사흘에 한 번 가벼운 조회를 보내 깨어 있게 둔다.
+# anon 키는 config.js 에 이미 공개돼 있는 값이라 비밀이 아니다.
+
+name: Supabase 깨워 두기
+
+on:
+  schedule:
+    - cron: '17 3 */3 * *'   # 사흘마다 03:17 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: config.js 에서 접속 정보 읽기
+        id: cfg
+        run: |
+          echo "url=$(grep -oE 'https://[a-z0-9]+\.supabase\.co' config.js | head -1)" >> "$GITHUB_OUTPUT"
+          echo "key=$(grep -oE 'eyJ[A-Za-z0-9_.-]+' config.js | head -1)" >> "$GITHUB_OUTPUT"
+
+      - name: 순위표 한 줄 조회
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+            "${{ steps.cfg.outputs.url }}/rest/v1/rankings?select=id&limit=1" \
+            -H "apikey: ${{ steps.cfg.outputs.key }}" \
+            -H "Authorization: Bearer ${{ steps.cfg.outputs.key }}")
+          echo "HTTP $code"
+          # 잠든 프로젝트는 DNS 부터 실패해 000 이 뜬다. 그때는 실패로 남겨 알아채게 한다.
+          [ "$code" = "200" ]
