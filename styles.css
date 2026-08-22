@@ -172,6 +172,13 @@ button:disabled { opacity: 0.35; cursor: default; }
 .study-answer { font-size: 1rem; margin-top: 8px; color: var(--green); }
 .study-answer b { color: var(--ink); }
 
+/* 순위표에 못 올린 점수 알림 — 조용히 사라지면 아무도 모른다 */
+.pending-note {
+  color: var(--red); font-weight: 700;
+  background: var(--red-soft); border-radius: 4px; padding: 7px 10px;
+}
+.rank-warn { color: var(--red); font-weight: 700; font-size: 0.82rem; line-height: 1.5; }
+
 /* 과목 탭 — 표지 맨 위, 문제은행과 순위표가 통째로 바뀐다 */
 .subject-tabs {
   display: flex; gap: 0; justify-content: center; margin: -6px 0 18px;

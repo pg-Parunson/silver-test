@@ -98,6 +98,7 @@
   var LS_NAME = 'jewelry-exam-name-v1';
   var LS_RANKING = 'jewelry-exam-ranking-v1';
   var LS_SUBJECT = 'jewelry-exam-subject-v1';
+  var LS_PENDING = 'jewelry-exam-pending-rank-v1';   // 순위표에 못 올린 점수
 
   var $ = function (sel) { return document.querySelector(sel); };
 
@@ -327,6 +328,50 @@
       return Promise.resolve(rows);
     }
   };
+
+  /* ---------- 못 올린 점수 ----------
+   * 서버가 잠들거나 회선이 끊기면 제출이 조용히 실패한다.
+   * 2026-08-22 에 무료 플랜 프로젝트가 스스로 잠들어 여럿이 함께 본 점수가
+   * 통째로 사라졌고, 화면에는 아무 표시도 없어 아무도 알아채지 못했다.
+   * 실패한 제출을 적어 두었다가 다음 접속 때 다시 올린다.
+   */
+  function pendingKey(name, mode) { return mode + '|' + normName(name); }
+
+  function loadPending() {
+    try { return JSON.parse(localStorage.getItem(LS_PENDING)) || {}; } catch (e) { return {}; }
+  }
+  function savePending(map) {
+    try { localStorage.setItem(LS_PENDING, JSON.stringify(map)); } catch (e) {}
+  }
+  function rememberPending(name, score, durationMs, mode) {
+    var map = loadPending();
+    map[pendingKey(name, mode)] = { name: name, score: score, durationMs: durationMs, mode: mode, ts: Date.now() };
+    savePending(map);
+  }
+  function forgetPending(name, mode) {
+    var map = loadPending();
+    var k = pendingKey(name, mode);
+    if (map[k]) { delete map[k]; savePending(map); }
+  }
+  function pendingCount() { return Object.keys(loadPending()).length; }
+
+  /** 밀린 점수를 다시 올린다. 또 실패하면 그대로 두고 다음을 기약한다. */
+  function flushPending() {
+    if (!CFG) return Promise.resolve(0);
+    var map = loadPending();
+    var keys = Object.keys(map);
+    if (!keys.length) return Promise.resolve(0);
+    var done = 0;
+    return keys.reduce(function (chain, k) {
+      return chain.then(function () {
+        var p = map[k];
+        // 원래 응시라 응시 횟수는 올라가야 한다 — resubmit 이 아니다.
+        return Ranking.submit(p.name, p.score, p.durationMs, p.mode)
+          .then(function () { forgetPending(p.name, p.mode); done++; })
+          .catch(function () {});
+      });
+    }, Promise.resolve()).then(function () { return done; });
+  }
 
   function renderRankingInto(tbodyId, myId, mode) {
     var tbody = document.getElementById(tbodyId);
@@ -711,6 +756,7 @@
   function pushRanking(record, resubmit) {
     var mode = rankMode(record.subject, record.mode);
     Ranking.submit(record.name, scoreOf(record), record.durationMs, mode, resubmit).then(function (res) {
+      forgetPending(record.name, mode);
       record.rankId = res && res.id;
       return renderRankingInto('ranking-body-result', record.rankId, mode);
     }).then(function () {
@@ -726,7 +772,15 @@
           break;
         }
       }
-    }).catch(function () {});
+    }).catch(function () {
+      // 조용히 삼키면 아무도 점수가 빠진 걸 모른다.
+      rememberPending(record.name, scoreOf(record), record.durationMs, mode);
+      // 이 경로에서는 순위표가 한 번도 안 그려져 빈 표로 남는다. 사정을 적어 둔다.
+      renderRankingInto('ranking-body-result', null, mode);
+      $('#result-rank-line').innerHTML =
+        '<span class="rank-warn">순위표에 올리지 못했습니다 — 서버가 응답하지 않습니다.<br>' +
+        '점수는 이 기기에 저장해 두었고, 다음에 접속할 때 다시 올립니다.</span>';
+    });
   }
 
   /* ---------- 성적 통지표 ---------- */
@@ -1130,6 +1184,18 @@
   }
 
   // 표지·자료실·순위표를 고른 과목으로 갈아끼운다.
+  /** 아직 못 올린 점수가 있으면 표지에 띄운다 */
+  function renderPendingNote() {
+    var el = $('#pending-note');
+    if (!el) return;
+    var n = pendingCount();
+    el.classList.toggle('hidden', n === 0);
+    if (n) {
+      el.textContent = '순위표에 올리지 못한 점수가 ' + n + '건 있습니다. ' +
+        '서버가 응답하면 자동으로 올라갑니다.';
+    }
+  }
+
   function renderSubject() {
     var s = subjectOf(homeSubject);
     var n = bankOf(homeSubject).length;
@@ -1164,6 +1230,13 @@
   function renderHome() {
     try { $('#input-name').value = localStorage.getItem(LS_NAME) || ''; } catch (e) {}
     renderSubject();
+    if (pendingCount()) {
+      flushPending().then(function (done) {
+        renderPendingNote();
+        if (done) renderHomeRanking();   // 방금 올라간 점수를 순위표에 반영
+      });
+    }
+    renderPendingNote();
     renderHomeRanking();
 
     var h = loadHistory().filter(function (x) {
