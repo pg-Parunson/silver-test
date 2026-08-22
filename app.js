@@ -4,15 +4,13 @@
 
   var EXAM_MINUTES = 60;
   var OX_MAX = 3;         // 시험당 OX형 상한 (기출에서 OX는 소수)
-  var POINT = 5;
   var PASS = 60;
 
-  // 시험 유형. 두 유형 모두 20문항·100점이라 채점·도장·순위 로직을 공유한다.
+  // 시험 유형. 문항 수는 과목마다 다르므로 여기 두지 않고 SUBJECTS.exam 에서 가져온다.
+  // 두 유형 모두 만점 100점이라 채점·도장·순위 로직을 공유한다.
   var MODES = {
-    full: { key: 'full', label: '전체 시험', short: '전체',
-            mc: 16, sa: 4, photoMc: 2, photoSa: 1 },
-    sa:   { key: 'sa',   label: '주관식만', short: '주관식',
-            mc: 0,  sa: 20, photoMc: 0, photoSa: 2 }
+    full: { key: 'full', label: '전체 시험', short: '전체', photoMc: 2, photoSa: 1 },
+    sa:   { key: 'sa',   label: '주관식만', short: '주관식', photoMc: 0, photoSa: 2 }
   };
   var DEFAULT_MODE = 'full';
   function modeOf(k) { return MODES[k] || MODES[DEFAULT_MODE]; }
@@ -29,6 +27,7 @@
       code: '대분류 인쇄·목재·가구·공예 · 소분류 귀금속·보석 · 능력단위 주얼리 제품 관리 (LM2202020611_16v3)',
       title: '주얼리 제품 관리<br>모의평가 문제지',
       note: 'source-note-jewelry',
+      exam: { full: { mc: 16, sa: 4 }, sa: { mc: 0, sa: 20 } },
       files: true, filesDesc: '이 시험의 모든 문항이 나온 원본 교재',
       hidden: true      // 시험이 끝나 표지에서 내림. 문제·순위 기록은 그대로 남아 있다.
     },
@@ -38,6 +37,7 @@
       code: '과정평가형 필기 · 왁스카빙 · 조립가공 · 가공안전관리 · 펜던트세공 · 기초조각 · 솔더링/버프연마 · 주얼리 제품 관리',
       title: '귀금속가공기능사<br>모의평가 문제지',
       note: 'source-note-metalwork',
+      exam: { full: { mc: 20, sa: 5 }, sa: { mc: 0, sa: 25 } },
       // 7개 능력단위 중 「주얼리 제품 관리」의 원본 교재라 이 과목에서도 쓸모가 있다.
       files: true, filesDesc: '7개 능력단위 중 「주얼리 제품 관리」 50문항의 원본 교재'
     }
@@ -53,6 +53,24 @@
   var HOME_SUBJECT = visibleSubjects()[0] || DEFAULT_SUBJECT;
   function visibleSubjectOf(k) {
     return (SUBJECTS[k] && !SUBJECTS[k].hidden) ? k : HOME_SUBJECT;
+  }
+
+  /**
+   * 과목과 유형이 정해지면 시험지 한 장의 모양이 정해진다.
+   * 배점은 만점 100점을 문항 수로 나눠 얻는다 — 20문항이면 5점, 25문항이면 4점.
+   */
+  function planOf(subjectKey, modeKey) {
+    var m = modeOf(modeKey);
+    var e = (subjectOf(subjectKey).exam || {})[m.key] || { mc: 0, sa: 0 };
+    var total = e.mc + e.sa;
+    return {
+      key: m.key, label: m.label, short: m.short,
+      mc: e.mc, sa: e.sa, total: total,
+      photoMc: m.photoMc, photoSa: m.photoSa,
+      point: total ? 100 / total : 0,
+      // "객관식 20 + 주관식 5" / "주관식 25문항"
+      compose: e.mc ? '객관식 ' + e.mc + ' + 주관식 ' + e.sa : '주관식 ' + e.sa + '문항'
+    };
   }
 
   /** 지금 과목의 문제은행 (없으면 빈 배열) */
@@ -368,7 +386,7 @@
   }
 
   function buildExam(modeKey, subjectKey) {
-    var m = modeOf(modeKey);
+    var m = planOf(subjectKey, modeKey);
     var BANK = bankOf(subjectKey);
     var usedSigs = {};   // 객관식·주관식이 서명을 공유해야 "정의 문항"이 양쪽에 겹치지 않는다
     var counters = { ox: 0 };
@@ -549,7 +567,7 @@
     qt.textContent = (i + 1) + '. ' + q.question + ' ';
     var pts = document.createElement('span');
     pts.className = 'pts';
-    pts.textContent = '(' + POINT + '점)';
+    pts.textContent = '(' + planOf(state.subject, state.mode).point + '점)';
     qt.appendChild(pts);
     card.appendChild(qt);
 
@@ -685,7 +703,8 @@
   }
 
   function scoreOf(record) {
-    return record.results.filter(function (r) { return r.correct; }).length * POINT;
+    var n = record.results.filter(function (r) { return r.correct; }).length;
+    return Math.round(n * planOf(record.subject, record.mode).point);
   }
 
   /** resubmit: 자가채점으로 점수만 고쳐 다시 올리는 경우 — 응시 횟수는 그대로 둔다 */
@@ -723,11 +742,10 @@
     var score = scoreOf(record);
     var pass = score >= PASS;
     var nCorrect = record.results.filter(function (r) { return r.correct; }).length;
-    var m = modeOf(record.mode);
+    var m = planOf(record.subject, record.mode);
 
     $('#result-mode').textContent =
-      subjectOf(record.subject).label + ' · ' +
-      (m.key === 'sa' ? '주관식만 · 주관식 20문항' : '전체 시험 · 객관식 16 + 주관식 4');
+      subjectOf(record.subject).label + ' · ' + m.label + ' · ' + m.compose;
     $('#ranking-note-result').textContent =
       subjectOf(record.subject).short + ' ' + m.label + ' 순위';
     $('#result-name').textContent = record.name;
@@ -736,7 +754,7 @@
     var passCell = $('#result-pass-cell');
     passCell.textContent = pass ? '합 격' : '불합격';
     passCell.className = pass ? 'pass' : 'fail';
-    $('#result-correct').textContent = nCorrect + ' / 20';
+    $('#result-correct').textContent = nCorrect + ' / ' + m.total;
     $('#result-duration').textContent = fmtTime(record.durationMs);
     $('#result-rank-line').textContent = '';
 
@@ -1103,7 +1121,7 @@
     $('#ranking-note').textContent =
       (CFG ? '모든 응시자 공유 순위' : '이 기기의 응시 기록 기준') +
       ' · ' + subjectOf(homeSubject).short +
-      ' · ' + (m.key === 'sa' ? '주관식 20문항' : '객관식 16 + 주관식 4') +
+      ' · ' + planOf(homeSubject, m.key).compose +
       ' · 재응시 시 최신 점수로 갱신';
     Array.prototype.forEach.call($('#rank-tabs').children, function (b) {
       b.classList.toggle('is-on', b.getAttribute('data-mode') === m.key);
@@ -1125,6 +1143,13 @@
     tabs.classList.toggle('hidden', visibleSubjects().length < 2);
     $('#cover-code').textContent = s.code;
     $('#cover-title').innerHTML = s.title;
+
+    var full = planOf(s.key, 'full'), only = planOf(s.key, 'sa');
+    $('#cover-total').textContent = full.total + '문항';
+    $('#cover-compose').textContent = '객관식 ' + full.mc + ' · 주관식 ' + full.sa;
+    $('#cover-point').textContent = '100점 (문항당 ' + full.point + '점)';
+    $('#hint-full').textContent = full.compose;
+    $('#hint-sa').textContent = only.compose;
     $('#hint-count').textContent = n ? n + '문항' : '전 문항';
     document.title = s.label + ' 모의평가';
 
@@ -1168,7 +1193,7 @@
       alert(subjectOf(homeSubject).label + ' 문제은행이 아직 준비되지 않았습니다.');
       return;
     }
-    var m = modeOf(modeKey);
+    var m = planOf(homeSubject, modeKey);
     var pool = bank.filter(function (q) { return q.type === 'sa'; }).length;
     if (m.key === 'sa' && pool < m.sa) {
       alert('주관식 문항이 ' + pool + '개뿐이라 ' + m.sa + '문항 시험을 만들 수 없습니다.');

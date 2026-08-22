@@ -28,8 +28,8 @@
       <h1 class="cover-title" id="cover-title">귀금속가공기능사<br>모의평가 문제지</h1>
 
       <table class="cover-info">
-        <tr><th>시험 시간</th><td>60분</td><th>문항 수</th><td>20문항</td></tr>
-        <tr><th>문항 구성</th><td>객관식 16 · 주관식 4</td><th>배점</th><td>100점 (문항당 5점)</td></tr>
+        <tr><th>시험 시간</th><td>60분</td><th>문항 수</th><td id="cover-total">25문항</td></tr>
+        <tr><th>문항 구성</th><td id="cover-compose">객관식 20 · 주관식 5</td><th>배점</th><td id="cover-point">100점 (문항당 4점)</td></tr>
       </table>
 
       <div class="cover-notice">
@@ -54,8 +54,8 @@
       </div>
       <button id="btn-study" class="btn-line study">📖 학습 시작 — 정답·해설 보며 공부</button>
       <p class="start-hint">
-        <b>시험 시작</b> — 객관식 16 + 주관식 4 (실제 시험과 동일)<br>
-        <b>주관식만</b> — 주관식 20문항 집중 연습<br>
+        <b>시험 시작</b> — <span id="hint-full">객관식 20 + 주관식 5</span> (실제 시험과 동일)<br>
+        <b>주관식만</b> — <span id="hint-sa">주관식 25문항</span> 집중 연습<br>
         <b>학습 시작</b> — 시간·점수 없이 <span id="hint-count">350문항</span>을 해설과 함께
       </p>
       <div class="stamp" aria-hidden="true">모의<br>평가</div>
@@ -121,7 +121,7 @@
   <section id="screen-exam" class="screen hidden">
     <div class="exam-topbar">
       <div class="timer-box"><span class="timer-label">남은 시간</span><span id="timer" class="timer">60:00</span></div>
-      <div id="progress" class="progress">1 / 20</div>
+      <div id="progress" class="progress">1 / 25</div>
       <button id="btn-submit-top" class="btn-line">답안 제출</button>
     </div>
     <nav id="qnav" class="qnav" aria-label="문항 이동"></nav>
