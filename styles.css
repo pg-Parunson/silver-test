@@ -172,6 +172,42 @@ button:disabled { opacity: 0.35; cursor: default; }
 .study-answer { font-size: 1rem; margin-top: 8px; color: var(--green); }
 .study-answer b { color: var(--ink); }
 
+/* ── 표지 양옆 배너 ──
+ * 기본은 없는 셈 친다. 시험지(760px)와 배너 두 장(160px)이 서로 밀지 않을 만큼
+ * 넓은 화면에서만 나타난다. 배경 이미지를 그 미디어 규칙 안에서만 지정해,
+ * 좁은 화면에서는 파일을 내려받지도 않게 했다.
+ */
+#ads { display: none; }
+
+@media (min-width: 1240px) and (min-height: 700px) {
+  body.on-home #ads { display: block; }
+
+  .ad {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 160px;
+    height: 600px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(40, 36, 20, 0.18);
+    background-repeat: no-repeat;
+    background-size: 160px 600px;
+    opacity: 0.94;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .ad:hover { opacity: 1; transform: translateY(-50%) scale(1.015); }
+
+  /* 시험지 가장자리에서 20px 떨어뜨린다. 화면이 더 넓어져도 시험지에 붙어 따라온다. */
+  .ad-left  { right: calc(50% + 380px + 20px); background-image: url("assets/banner-charm.webp"); }
+  .ad-right { left:  calc(50% + 380px + 20px); background-image: url("assets/banner-wealth.webp"); }
+}
+
+/* 아주 넓은 화면에서는 시험지에서 조금 더 떼어 놓는다 */
+@media (min-width: 1500px) and (min-height: 700px) {
+  .ad-left  { right: calc(50% + 380px + 56px); }
+  .ad-right { left:  calc(50% + 380px + 56px); }
+}
+
 /* 순위표에 못 올린 점수 알림 — 조용히 사라지면 아무도 모른다 */
 .pending-note {
   color: var(--red); font-weight: 700;

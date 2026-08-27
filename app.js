@@ -226,6 +226,8 @@
     ['screen-home', 'screen-exam', 'screen-study', 'screen-result'].forEach(function (s) {
       document.getElementById(s).classList.toggle('hidden', s !== id);
     });
+    // 배너는 표지에서만 보인다 — 시험·학습·성적표에서는 물러난다.
+    document.body.classList.toggle('on-home', id === 'screen-home');
     window.scrollTo(0, 0);
   }
 
