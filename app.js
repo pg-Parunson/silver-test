@@ -195,13 +195,6 @@
 
   function normName(s) { return (s || '').trim().replace(/\s+/g, ''); }
 
-  function maskName(name) {
-    var n = normName(name);
-    if (n.length <= 1) return n + '*';
-    if (n.length === 2) return n[0] + '*';
-    return n[0] + new Array(n.length - 1).join('*') + n[n.length - 1];
-  }
-
   function fmtTime(ms) {
     var total = Math.max(0, Math.round(ms / 1000));
     var m = Math.floor(total / 60);
@@ -247,7 +240,7 @@
   var CFG = window.RANKING_CONFIG || null;
 
   function nameKey(name, mode) {
-    // 정규화 이름의 SHA-256 앞 16자 — 서버에는 마스킹된 이름만 저장.
+    // 정규화 이름의 SHA-256 앞 16자.
     // 모드마다 다른 행이어야 하므로 seed에 모드를 섞는다.
     // 'full'은 모드 도입 이전 seed를 그대로 써서 기존 기록을 보존한다.
     var n = normName(name);
@@ -267,7 +260,10 @@
   var Ranking = {
     // 재응시 시 점수는 최신 점수로 갱신 (같은 이름이라도 모드가 다르면 별도 행)
     submit: function (name, score, durationMs, mode, resubmit) {
-      var masked = maskName(name);
+      // 응시자 요청으로 마스킹을 뗐다 — 순위표에 성명을 그대로 싣는다.
+      // name_masked 는 마스킹하던 시절의 컬럼 이름이라 뜻과 어긋나지만,
+      // 이름을 바꾸면 옛 화면을 띄워 둔 사람의 제출이 깨져 그대로 둔다.
+      var shown = normName(name);
       mode = normRankMode(mode);
       return nameKey(name, mode).then(function (id) {
         if (CFG) {
@@ -286,7 +282,7 @@
                 method: 'POST',
                 headers: Object.assign({ 'Prefer': 'resolution=merge-duplicates' }, headers),
                 body: JSON.stringify({
-                  id: id, name_masked: masked, score: score, mode: mode,
+                  id: id, name_masked: shown, score: score, mode: mode,
                   attempts: attempts, duration_ms: durationMs,
                   updated_at: new Date().toISOString()
                 })
@@ -299,7 +295,7 @@
         try { map = JSON.parse(localStorage.getItem(LS_RANKING)) || {}; } catch (e) {}
         var prev = map[id];
         map[id] = {
-          name_masked: masked, score: score, mode: mode,
+          name_masked: shown, score: score, mode: mode,
           attempts: resubmit ? ((prev && prev.attempts) || 1) : (prev ? prev.attempts : 0) + 1,
           duration_ms: durationMs, updated_at: new Date().toISOString()
         };
