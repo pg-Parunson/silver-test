@@ -237,6 +237,23 @@ button:disabled { opacity: 0.35; cursor: default; }
 }
 .match-right .m-mark { font-weight: 800; color: var(--stamp-ink); flex: none; }
 
+/* 그림 보기 — 실제 시험지처럼 도형을 나란히 세운다 */
+.match-right.is-figure {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  align-items: end;
+}
+.match-right.is-figure li {
+  display: flex; flex-direction: column-reverse; align-items: center; gap: 4px;
+  padding: 0; text-align: center;
+}
+.match-right.is-figure .m-mark { font-size: 0.9rem; }
+.match-right .m-fig {
+  width: 100%; max-width: 76px; height: auto; display: block;
+}
+@media (max-width: 380px) {
+  .match-right.is-figure { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+}
+
 /* 복기 — 줄마다 맞고 틀림을 표시한다 */
 .match-row.rline.ok { border-color: var(--green); background: var(--green-soft); }
 .match-row.rline.no { border-color: var(--red); background: var(--red-soft); }

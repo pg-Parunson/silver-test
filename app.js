@@ -481,6 +481,8 @@
         id: q.id, type: 'match', unit: q.unit, source: q.source, question: q.question,
         left: q.left.slice(),
         right: order.map(function (i) { return q.right[i]; }),
+        // 그림 보기도 글과 같은 차례로 섞어야 기호와 그림이 어긋나지 않는다
+        rightImages: q.rightImages ? order.map(function (i) { return q.rightImages[i]; }) : null,
         answer: q.left.map(function (_, i) { return place[i]; }),
         explanation: q.explanation
       };
@@ -539,16 +541,7 @@
       pairs.appendChild(row);
     });
     box.appendChild(pairs);
-
-    var list = document.createElement('ul');
-    list.className = 'match-right';
-    q.right.forEach(function (text, ri) {
-      var li = document.createElement('li');
-      li.innerHTML = '<span class="m-mark">' + MATCH_MARKS[ri] + '</span>' +
-        '<span>' + escapeHtml(text) + '</span>';
-      list.appendChild(li);
-    });
-    box.appendChild(list);
+    box.appendChild(buildMatchRightList(q));
     return box;
   }
 
@@ -577,16 +570,34 @@
     });
     box.appendChild(pairs);
 
+    box.appendChild(buildMatchRightList(q));
+    return box;
+  }
+
+  /**
+   * 오른쪽 보기 판. rightImages 가 있으면 글 대신 그림을 세운다.
+   * 실제 시험지의 연결형은 보석 형태를 그림으로 물어 오므로 그 꼴을 맞춘다.
+   */
+  function buildMatchRightList(q) {
+    var withImg = Array.isArray(q.rightImages) && q.rightImages.length === q.right.length;
     var list = document.createElement('ul');
-    list.className = 'match-right';
+    list.className = 'match-right' + (withImg ? ' is-figure' : '');
     q.right.forEach(function (text, ri) {
       var li = document.createElement('li');
-      li.innerHTML = '<span class="m-mark">' + MATCH_MARKS[ri] + '</span>' +
-        '<span>' + escapeHtml(text) + '</span>';
+      var mark = '<span class="m-mark">' + MATCH_MARKS[ri] + '</span>';
+      if (withImg) {
+        var img = document.createElement('img');
+        img.className = 'm-fig';
+        img.src = q.rightImages[ri];
+        img.alt = '';            // 보기 그림 — 이름을 읽어 주면 답이 새어 나간다
+        li.innerHTML = mark;
+        li.appendChild(img);
+      } else {
+        li.innerHTML = mark + '<span>' + escapeHtml(text) + '</span>';
+      }
       list.appendChild(li);
     });
-    box.appendChild(list);
-    return box;
+    return list;
   }
 
   function buildExam(modeKey, subjectKey) {
@@ -1097,7 +1108,8 @@
   function studyPool() {
     return bankOf(study.subject).filter(function (q) {
       if (study.unit !== 'all' && q.unit !== study.unit) return false;
-      if (study.type !== 'all' && q.type !== study.type) return false;
+      // 유형은 네 가지 — q.type 만으로는 진위형과 4지택일을 못 가른다
+      if (study.type !== 'all' && !TYPES[study.type].bucket(q)) return false;
       return true;
     });
   }
@@ -1173,7 +1185,7 @@
     var meta = document.createElement('div');
     meta.className = 'qmeta';
     meta.innerHTML =
-      '<span class="tag ' + q.type + '">' + (q.type === 'mc' ? '객관식' : '주관식') + '</span>' +
+      '<span class="tag ' + q.type + '">' + typeLabel(q) + '</span>' +
       '<span class="tag unit">' + escapeHtml(q.unit) + '</span>' +
       (q.source ? '<span class="tag unit">' + escapeHtml(q.source) + '</span>' : '');
     card.appendChild(meta);

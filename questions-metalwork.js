@@ -1,5 +1,6 @@
 /* 문제은행 — 귀금속가공기능사(과정평가형) 필기 요점정리 기반 (자동 생성·검수 반영)
-   외부평가 가이드의 네 유형: 진위형(mc 2선지) · 연결형(match) · 4지택일(mc 4선지) · 단답형(sa) */
+   외부평가 가이드의 네 유형: 진위형(mc 2선지) · 연결형(match) · 4지택일(mc 4선지) · 단답형(sa)
+   연결형 중 일부는 rightImages 로 보기를 그림으로 낸다 (보석 연마형태) */
 var QUESTIONS_METALWORK = [
   {
     "id": "wax-mc-01",
@@ -3746,6 +3747,110 @@ var QUESTIONS_METALWORK = [
       "1,083℃"
     ],
     "explanation": "금은 융점 1064℃로 화학적으로 가장 안정하고 전연성이 가장 좋다. 은은 960.5℃로 열·전기 전도가 가장 뛰어나며, 백금은 1733.5℃로 가장 높고, 구리는 1,083℃다."
+  },
+  {
+    "id": "pend-mt-11",
+    "type": "match",
+    "unit": "귀금속 펜던트세공",
+    "source": "펜던트세공 > 재료 가공하기 > 보석의 연마형태",
+    "question": "캐보션 컷의 종류와 그 형태를 올바르게 연결하시오.",
+    "left": [
+      "싱글 캐보션",
+      "더블 캐보션",
+      "할로우 캐보션",
+      "평 캐보션"
+    ],
+    "right": [
+      "윗면만 둥근 돔이고 아랫면은 평평한 형태",
+      "위아래가 모두 볼록한 렌즈 모양",
+      "아랫면 속이 오목하게 파여 껍질처럼 비어 있는 형태",
+      "돔이 아주 낮고 납작한 형태"
+    ],
+    "rightImages": [
+      "assets/gems/cab-single.webp",
+      "assets/gems/cab-double.webp",
+      "assets/gems/cab-hollow.webp",
+      "assets/gems/cab-flat.webp"
+    ],
+    "explanation": "캐보션은 모서리나 각 없이 둥그런 곡면으로 연마한 형태다. 싱글 캐보션은 윗면만 돔이고 아랫면이 평평한 가장 일반적인 형태, 더블 캐보션은 위아래가 모두 볼록한 렌즈 모양, 할로우 캐보션은 아랫면 속을 파낸 형태, 평 캐보션은 돔이 낮고 납작한 형태다."
+  },
+  {
+    "id": "pend-mt-12",
+    "type": "match",
+    "unit": "귀금속 펜던트세공",
+    "source": "펜던트세공 > 재료 가공하기 > 보석의 연마형태",
+    "question": "캐보션 컷의 대표 보석과 그 형태를 올바르게 연결하시오.",
+    "left": [
+      "캣츠아이·문스톤",
+      "가넷",
+      "오팔",
+      "가장 일반적인 형태"
+    ],
+    "right": [
+      "위아래가 모두 볼록한 렌즈 모양",
+      "아랫면 속이 오목하게 파인 형태",
+      "돔이 아주 낮고 납작한 형태",
+      "윗면만 둥근 돔이고 아랫면은 평평한 형태"
+    ],
+    "rightImages": [
+      "assets/gems/cab-double.webp",
+      "assets/gems/cab-hollow.webp",
+      "assets/gems/cab-flat.webp",
+      "assets/gems/cab-single.webp"
+    ],
+    "explanation": "캐보션은 대표 보석으로도 구분한다. 더블 캐보션은 캣츠아이와 문스톤, 할로우 캐보션은 가넷, 평 캐보션은 오팔에 쓰이며, 싱글 캐보션이 가장 일반적인 형태다."
+  },
+  {
+    "id": "pend-mt-13",
+    "type": "match",
+    "unit": "귀금속 펜던트세공",
+    "source": "펜던트세공 > 재료 가공하기 > 보석의 연마형태",
+    "question": "패싯 컷의 종류와 그 형태를 올바르게 연결하시오.",
+    "left": [
+      "라운드 브릴리언트 컷",
+      "마퀴스 컷",
+      "에메랄드 컷",
+      "바게트 컷"
+    ],
+    "right": [
+      "원형에 방사형으로 면을 나눈 형태",
+      "양 끝이 뾰족한 배 모양",
+      "네 모서리를 잘라 팔각형이 되고 계단식 면을 가진 형태",
+      "가늘고 긴 직사각형에 계단식 면을 가진 형태"
+    ],
+    "rightImages": [
+      "assets/gems/cut-round-brilliant.webp",
+      "assets/gems/cut-marquise.webp",
+      "assets/gems/cut-emerald.webp",
+      "assets/gems/cut-baguette.webp"
+    ],
+    "explanation": "패싯 형태는 각도를 맞추어 깎아 빛의 반사와 굴절 효과를 낸다. 라운드 브릴리언트는 투명 보석을 연마하는 가장 이상적인 방법으로 총 58개의 면을 가지며, 마퀴스는 양 끝이 뾰족하고, 에메랄드 컷과 바게트 컷은 계단식(step) 면을 가진다."
+  },
+  {
+    "id": "pend-mt-14",
+    "type": "match",
+    "unit": "귀금속 펜던트세공",
+    "source": "펜던트세공 > 재료 가공하기 > 보석의 연마형태",
+    "question": "패싯 컷의 종류와 그 형태를 올바르게 연결하시오.",
+    "left": [
+      "오벌 컷",
+      "팬시(페어) 컷",
+      "마퀴스 컷",
+      "라운드 브릴리언트 컷"
+    ],
+    "right": [
+      "끝이 둥근 타원형에 방사형으로 면을 나눈 형태",
+      "한쪽은 둥글고 반대쪽은 뾰족한 물방울 모양",
+      "양 끝이 모두 뾰족한 배 모양",
+      "완전한 원형에 방사형으로 면을 나눈 형태"
+    ],
+    "rightImages": [
+      "assets/gems/cut-oval.webp",
+      "assets/gems/cut-pear.webp",
+      "assets/gems/cut-marquise.webp",
+      "assets/gems/cut-round-brilliant.webp"
+    ],
+    "explanation": "패싯 형태에는 라운드브릴리언트·마퀴스·팬시·오벌·바게트·에메랄드·스텝컷이 있다. 오벌은 끝이 둥근 타원, 팬시(페어)는 물방울 모양, 마퀴스는 양 끝이 뾰족한 배 모양으로 서로 구분된다."
   },
   {
     "id": "pend-ox-01",
