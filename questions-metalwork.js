@@ -3853,6 +3853,110 @@ var QUESTIONS_METALWORK = [
     "explanation": "패싯 형태에는 라운드브릴리언트·마퀴스·팬시·오벌·바게트·에메랄드·스텝컷이 있다. 오벌은 끝이 둥근 타원, 팬시(페어)는 물방울 모양, 마퀴스는 양 끝이 뾰족한 배 모양으로 서로 구분된다."
   },
   {
+    "id": "pend-mt-15",
+    "type": "match",
+    "unit": "귀금속 펜던트세공",
+    "source": "펜던트세공 > 재료 가공하기 > 보석의 연마형태",
+    "question": "다음 컷의 종류와 그 형태를 올바르게 연결하시오.",
+    "left": [
+      "바게트 컷",
+      "에메랄드 컷",
+      "라운드 브릴리언트 컷",
+      "오벌 컷"
+    ],
+    "right": [
+      "가늘고 긴 직사각형의 계단식 면",
+      "모서리를 자른 팔각형의 계단식 면",
+      "원형의 방사형 면",
+      "타원형의 방사형 면"
+    ],
+    "rightImages": [
+      "assets/gems/cut-baguette.webp",
+      "assets/gems/cut-emerald.webp",
+      "assets/gems/cut-round-brilliant.webp",
+      "assets/gems/cut-oval.webp"
+    ],
+    "explanation": "바게트 컷과 에메랄드 컷은 면이 테두리와 나란히 층을 이루는 계단식(step) 컷이고, 라운드 브릴리언트와 오벌은 중심에서 뻗어 나가는 방사형 면을 가진다. 계단식은 맑기를, 방사형은 반짝임을 살린다."
+  },
+  {
+    "id": "pend-mt-16",
+    "type": "match",
+    "unit": "귀금속 펜던트세공",
+    "source": "펜던트세공 > 재료 가공하기 > 보석의 연마형태",
+    "question": "다음 컷의 종류와 그 형태를 올바르게 연결하시오.",
+    "left": [
+      "마퀴스 컷",
+      "팬시(페어) 컷",
+      "오벌 컷",
+      "에메랄드 컷"
+    ],
+    "right": [
+      "양 끝이 모두 뾰족한 형태",
+      "한쪽 끝만 뾰족한 형태",
+      "양 끝이 모두 둥근 형태",
+      "네 모서리를 잘라 낸 각진 형태"
+    ],
+    "rightImages": [
+      "assets/gems/cut-marquise.webp",
+      "assets/gems/cut-pear.webp",
+      "assets/gems/cut-oval.webp",
+      "assets/gems/cut-emerald.webp"
+    ],
+    "explanation": "마퀴스는 양 끝이 뾰족한 배 모양, 페어는 한쪽만 뾰족한 물방울 모양, 오벌은 양 끝이 둥근 타원이다. 에메랄드 컷은 곡선이 없는 각진 팔각형이다."
+  },
+  {
+    "id": "pend-mt-17",
+    "type": "match",
+    "unit": "귀금속 펜던트세공",
+    "source": "펜던트세공 > 재료 가공하기 > 보석의 연마형태",
+    "question": "캐보션의 종류와 아랫면의 생김새를 올바르게 연결하시오.",
+    "left": [
+      "싱글 캐보션",
+      "더블 캐보션",
+      "할로우 캐보션",
+      "평 캐보션"
+    ],
+    "right": [
+      "아랫면이 평평하다",
+      "아랫면도 볼록하다",
+      "아랫면 속이 파여 있다",
+      "윗면까지 납작하다"
+    ],
+    "rightImages": [
+      "assets/gems/cab-single.webp",
+      "assets/gems/cab-double.webp",
+      "assets/gems/cab-hollow.webp",
+      "assets/gems/cab-flat.webp"
+    ],
+    "explanation": "캐보션은 아랫면으로 구분하면 쉽다. 싱글은 아랫면이 평평하고, 더블은 아랫면도 볼록해 렌즈 모양이 되며, 할로우는 아랫면 속을 파냈고, 평 캐보션은 돔 자체가 낮아 윗면까지 납작하다."
+  },
+  {
+    "id": "pend-mt-18",
+    "type": "match",
+    "unit": "귀금속 펜던트세공",
+    "source": "펜던트세공 > 재료 가공하기 > 보석의 연마형태",
+    "question": "보석의 연마형태와 그 모양을 올바르게 연결하시오.",
+    "left": [
+      "싱글 캐보션",
+      "더블 캐보션",
+      "라운드 브릴리언트 컷",
+      "바게트 컷"
+    ],
+    "right": [
+      "각 없이 둥근 곡면이고 아랫면은 평평",
+      "각 없이 위아래가 모두 둥근 곡면",
+      "원형에 각진 면을 방사형으로 낸 형태",
+      "길쭉한 직사각형에 각진 면을 층으로 낸 형태"
+    ],
+    "rightImages": [
+      "assets/gems/cab-single.webp",
+      "assets/gems/cab-double.webp",
+      "assets/gems/cut-round-brilliant.webp",
+      "assets/gems/cut-baguette.webp"
+    ],
+    "explanation": "캐보션은 모서리나 각이 없는 둥근 곡면이고, 패싯 형태는 각도를 맞추어 깎아 빛의 반사와 굴절 효과를 낸다. 같은 캐보션이라도 아랫면이 평평하면 싱글, 볼록하면 더블이다."
+  },
+  {
     "id": "pend-ox-01",
     "type": "mc",
     "unit": "귀금속 펜던트세공",

@@ -8,8 +8,8 @@
   // 시험 유형. 문항 수는 과목마다 다르므로 여기 두지 않고 SUBJECTS.exam 에서 가져온다.
   // 두 유형 모두 만점 100점이라 채점·도장·순위 로직을 공유한다.
   var MODES = {
-    full: { key: 'full', label: '전체 시험', short: '전체', photoMc: 2, photoSa: 1 },
-    sa:   { key: 'sa',   label: '주관식만', short: '주관식', photoMc: 0, photoSa: 2 }
+    full: { key: 'full', label: '전체 시험', short: '전체', photoMc: 2, photoSa: 1, photoMatch: 1 },
+    sa:   { key: 'sa',   label: '주관식만', short: '주관식', photoMc: 0, photoSa: 2, photoMatch: 0 }
   };
   var DEFAULT_MODE = 'full';
   function modeOf(k) { return MODES[k] || MODES[DEFAULT_MODE]; }
@@ -71,7 +71,7 @@
       key: m.key, label: m.label, short: m.short,
       counts: counts, total: total,
       mc: counts.mc, sa: counts.sa,
-      photoMc: m.photoMc, photoSa: m.photoSa,
+      photoMc: m.photoMc, photoSa: m.photoSa, photoMatch: m.photoMatch || 0,
       point: total ? 100 / total : 0,
       // "선택형 20 + 단답형 5" / "단답형 25문항"
       compose: objective ? '선택형 ' + objective + ' + 단답형 ' + counts.sa
@@ -143,6 +143,10 @@
 
   function isOX(q) { return q.type === 'mc' && q.choices && q.choices.length === 2; }
   function isMatch(q) { return q.type === 'match'; }
+  /** 그림이 걸린 문항 — 사진이 붙은 문항과 보기가 그림인 연결형 둘 다 */
+  function hasFigure(q) {
+    return !!(q.image || (q.rightImages && q.rightImages.length));
+  }
 
   /* 외부평가 가이드가 정한 네 가지 문제 유형.
    * 진위형·연결형·4지택일은 선택형, 단답형만 주관식이다.
@@ -447,7 +451,7 @@
   function pickWithPhotos(pool, total, photoMin, usedSigs, counters) {
     // 사진 문항도 서명 검사를 거쳐야 한다. 앞서 뽑힌 문항과 정답이 같은 사진 문항은
     // 뒤로 미루고, 개수가 모자랄 때만 되돌려 채운다.
-    var photoPool = shuffle(pool.filter(function (q) { return q.image; }));
+    var photoPool = shuffle(pool.filter(hasFigure));
     var photos = [];
     var deferred = [];
     photoPool.forEach(function (q) {
@@ -722,7 +726,11 @@
       var want = m.counts[tk];
       if (!want) return;
       var pool = BANK.filter(TYPES[tk].bucket);
-      var photoMin = tk === 'sa' ? m.photoSa : (tk === 'mc' ? m.photoMc : 0);
+      // 연결형은 보기가 그림인 문항이 매 시험 한 개는 나오게 한다 —
+      // 그러지 않으면 그림 문항이 여섯 번에 한 번꼴로만 걸린다.
+      var photoMin = tk === 'sa' ? m.photoSa
+                   : tk === 'mc' ? m.photoMc
+                   : tk === 'match' ? m.photoMatch : 0;
       pickWithPhotos(pool, want, photoMin, usedSigs, counters).forEach(function (q) {
         out.push(makeItem(q, tk));
       });
