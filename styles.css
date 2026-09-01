@@ -208,64 +208,76 @@ button:disabled { opacity: 0.35; cursor: default; }
   .ad-right { left:  calc(50% + 380px + 56px); }
 }
 
-/* ── 연결형 ── */
-.match-box { margin-top: 4px; }
-.match-pairs { display: flex; flex-direction: column; gap: 7px; }
-.match-row {
+/* ── 연결형: 좌우를 눌러 선으로 잇는다 ── */
+.mc-hint {
+  margin: 0 0 10px; font-family: var(--sans); font-size: 0.75rem;
+  color: var(--ink-soft); line-height: 1.55; word-break: keep-all;
+}
+
+.match-connect {
+  position: relative;
+  display: grid; grid-template-columns: 1fr 46px 1fr;
+  align-items: stretch;
+}
+.mc-wires { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.mc-wires line { stroke-width: 2.5; stroke-linecap: round; }
+.mc-wires .w-mine { stroke: var(--navy); }
+.mc-wires .w-ok   { stroke: var(--green); }
+.mc-wires .w-no   { stroke: var(--red); }
+.mc-wires .w-want { stroke: var(--green); stroke-dasharray: 5 5; stroke-width: 2; opacity: 0.75; }
+
+/* 두 칸의 줄 높이를 맞춰야 점이 나란히 선다 */
+.mc-col { display: grid; grid-auto-rows: 1fr; gap: 8px; }
+
+.mc-item {
   display: flex; align-items: center; gap: 8px;
   border: 1px solid var(--line); border-radius: 4px;
-  padding: 9px 10px; background: #fcfbf7;
+  background: #fcfbf7; padding: 9px 10px;
+  font: inherit; text-align: left; color: var(--ink);
+  min-height: 46px;                 /* 손가락으로 누를 만한 크기 */
 }
-.match-row .m-num { font-weight: 800; color: var(--navy); flex: none; }
-.match-row .m-text { flex: 1; min-width: 0; font-size: 0.95rem; word-break: keep-all; }
-.match-row .m-pick {
-  flex: none; width: 62px; text-align: center;
-  font-family: var(--sans); font-size: 0.98rem; font-weight: 700;
-  border: 1px solid var(--line-dark); border-radius: 4px;
-  background: var(--paper); color: var(--ink); padding: 7px 4px;
-}
-.match-row .m-pick:focus { outline: none; border-color: var(--navy); }
+.mc-item .mc-label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; }
+.mc-mark { font-weight: 800; color: var(--navy); flex: none; }
+.mc-r .mc-mark { color: var(--stamp-ink); }
+.mc-text { font-size: 0.87rem; line-height: 1.45; word-break: keep-all; }
 
-/* 오른쪽 보기 — 고르개에 붙은 기호가 무엇인지 알려 주는 판 */
-.match-right {
-  list-style: none; margin: 12px 0 0; padding: 12px 12px 10px;
-  border: 1px dashed var(--line-dark); border-radius: 4px; background: #f7f5ee;
+/* 선이 닿는 점 */
+.mc-dot {
+  flex: none; width: 11px; height: 11px; border-radius: 50%;
+  border: 2px solid var(--line-dark); background: var(--paper);
 }
-.match-right li {
-  display: flex; gap: 8px; align-items: baseline;
-  font-size: 0.92rem; padding: 3px 0; word-break: keep-all;
+.mc-item.is-linked { border-color: var(--navy); background: var(--navy-soft); }
+.mc-item.is-linked .mc-dot { background: var(--navy); border-color: var(--navy); }
+.mc-item.is-armed {
+  border-color: var(--stamp-ink); background: #efecfb;
+  box-shadow: 0 0 0 2px rgba(59, 46, 140, 0.18);
 }
-.match-right .m-mark { font-weight: 800; color: var(--stamp-ink); flex: none; }
+.mc-item.is-armed .mc-dot { background: var(--stamp-ink); border-color: var(--stamp-ink); }
 
-/* 그림 보기 — 실제 시험지처럼 도형을 나란히 세운다 */
-.match-right.is-figure {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
-  align-items: end;
-}
-.match-right.is-figure li {
-  display: flex; flex-direction: column-reverse; align-items: center; gap: 4px;
-  padding: 0; text-align: center;
-}
-.match-right.is-figure .m-mark { font-size: 0.9rem; }
-.match-right .m-fig {
-  width: 100%; max-width: 76px; height: auto; display: block;
-}
-@media (max-width: 380px) {
-  .match-right.is-figure { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-}
+/* 그림 보기 */
+.mc-fig { width: 100%; max-width: 74px; height: auto; display: block; }
+.match-connect.has-fig .mc-item.mc-r .mc-label { justify-content: flex-start; }
 
-/* 복기 — 줄마다 맞고 틀림을 표시한다 */
-.match-row.rline.ok { border-color: var(--green); background: var(--green-soft); }
-.match-row.rline.no { border-color: var(--red); background: var(--red-soft); }
-.match-row .m-got {
-  flex: none; font-family: var(--sans); font-weight: 800; font-size: 0.86rem; white-space: nowrap;
+/* 복기 — 누를 수 없고 선 색으로 맞고 틀림을 보인다 */
+.match-connect.is-review .mc-item { opacity: 1; cursor: default; }
+.match-connect.is-review .mc-item.is-linked { background: #fcfbf7; border-color: var(--line); }
+.match-connect.is-review .mc-item.is-linked .mc-dot { background: var(--line-dark); border-color: var(--line-dark); }
+.mc-legend {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 12px 0 0; font-family: var(--sans); font-size: 0.8rem; font-weight: 700;
 }
-.match-row.rline.ok .m-got { color: var(--green); }
-.match-row.rline.no .m-got { color: var(--red); }
-.match-row.rline.no .m-got b { color: var(--green); }
+.mc-legend span {
+  border: 1px solid currentColor; border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+}
+.mc-legend .ok { color: var(--green); background: var(--green-soft); }
+.mc-legend .no { color: var(--red); background: var(--red-soft); }
 
-/* 유형 딱지 */
-.tag.match { background: var(--navy-soft); color: var(--navy); }
+@media (max-width: 400px) {
+  .match-connect { grid-template-columns: 1fr 30px 1fr; }
+  .mc-item { padding: 8px 7px; gap: 6px; min-height: 44px; }
+  .mc-text { font-size: 0.79rem; }
+  .mc-fig { max-width: 66px; }
+}
 
 /* 순위표에 못 올린 점수 알림 — 조용히 사라지면 아무도 모른다 */
 .pending-note {

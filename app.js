@@ -507,97 +507,208 @@
     };
   }
 
-  /**
-   * 연결형 답안칸. 왼쪽 항목마다 고르개를 하나씩 두고 ㉠㉡㉢㉣ 중 하나를 고르게 한다.
-   * 끌어다 놓기는 폰에서 다루기 어려워 고르개로 갔다.
+  /* ---------- 연결형: 좌우를 눌러 선으로 잇는다 ----------
+   * 실제 시험지처럼 왼쪽 항목과 오른쪽 보기를 줄로 잇는다.
+   * 오른쪽 보기 하나에는 선이 하나만 붙으므로 같은 보기를 두 번 고를 수 없다.
+   * 답안은 예전과 같은 꼴(왼쪽 자리 → 오른쪽 번호)로 남겨 채점·이어풀기가 그대로 돈다.
    */
-  function buildMatchBox(q, mine, onChange) {
-    var box = document.createElement('div');
-    box.className = 'match-box';
 
-    var picks = Array.isArray(mine) ? mine.slice() : [];
-
-    var pairs = document.createElement('div');
-    pairs.className = 'match-pairs';
-    q.left.forEach(function (text, li) {
-      var row = document.createElement('div');
-      row.className = 'match-row';
-      row.innerHTML = '<span class="m-num">' + CIRCLED[li] + '</span>' +
-        '<span class="m-text">' + escapeHtml(text) + '</span>';
-
-      var sel = document.createElement('select');
-      sel.className = 'm-pick';
-      sel.setAttribute('aria-label', text + ' 에 연결할 보기');
-      sel.innerHTML = '<option value="">－</option>' +
-        q.right.map(function (_, ri) {
-          return '<option value="' + ri + '">' + MATCH_MARKS[ri] + '</option>';
-        }).join('');
-      sel.value = (typeof picks[li] === 'number') ? String(picks[li]) : '';
-      sel.addEventListener('change', function () {
-        picks[li] = sel.value === '' ? undefined : Number(sel.value);
-        onChange(picks.slice());
-      });
-      row.appendChild(sel);
-      pairs.appendChild(row);
-    });
-    box.appendChild(pairs);
-    box.appendChild(buildMatchRightList(q));
-    return box;
-  }
-
-  /** 연결형 복기 — 줄마다 내가 고른 것과 정답을 나란히 보인다. */
-  function buildMatchReview(q, mine) {
-    var box = document.createElement('div');
-    box.className = 'match-box';
-    var picks = Array.isArray(mine) ? mine : [];
-
-    var pairs = document.createElement('div');
-    pairs.className = 'match-pairs';
-    q.left.forEach(function (text, li) {
-      var got = picks[li];
-      var want = q.answer[li];
-      var ok = got === want;
-      var row = document.createElement('div');
-      row.className = 'match-row rline ' + (ok ? 'ok' : 'no');
-      row.innerHTML =
-        '<span class="m-num">' + CIRCLED[li] + '</span>' +
-        '<span class="m-text">' + escapeHtml(text) + '</span>' +
-        '<span class="m-got">' +
-          (typeof got === 'number' ? MATCH_MARKS[got] : '－') +
-          (ok ? ' ✓' : ' ✗ → <b>' + MATCH_MARKS[want] + '</b>') +
-        '</span>';
-      pairs.appendChild(row);
-    });
-    box.appendChild(pairs);
-
-    box.appendChild(buildMatchRightList(q));
-    return box;
+  /** 보기 한 칸 — 기호와 내용(글 또는 그림), 그리고 선이 닿을 점 */
+  function matchItemBody(mark, text, imgSrc) {
+    var label = document.createElement('span');
+    label.className = 'mc-label';
+    var m = document.createElement('span');
+    m.className = 'mc-mark';
+    m.textContent = mark;
+    label.appendChild(m);
+    if (imgSrc) {
+      var img = document.createElement('img');
+      img.className = 'mc-fig';
+      img.src = imgSrc;
+      img.alt = '';          // 그림 이름을 읽어 주면 답이 새어 나간다
+      label.appendChild(img);
+    } else {
+      var t = document.createElement('span');
+      t.className = 'mc-text';
+      t.textContent = text;
+      label.appendChild(t);
+    }
+    return label;
   }
 
   /**
-   * 오른쪽 보기 판. rightImages 가 있으면 글 대신 그림을 세운다.
-   * 실제 시험지의 연결형은 보석 형태를 그림으로 물어 오므로 그 꼴을 맞춘다.
+   * 연결형 판을 세운다.
+   * opts.readOnly 면 누를 수 없고, opts.answer 가 있으면 정답 선을 함께 그린다.
    */
-  function buildMatchRightList(q) {
+  function buildMatchConnect(q, mine, onChange, opts) {
+    opts = opts || {};
     var withImg = Array.isArray(q.rightImages) && q.rightImages.length === q.right.length;
-    var list = document.createElement('ul');
-    list.className = 'match-right' + (withImg ? ' is-figure' : '');
-    q.right.forEach(function (text, ri) {
-      var li = document.createElement('li');
-      var mark = '<span class="m-mark">' + MATCH_MARKS[ri] + '</span>';
-      if (withImg) {
-        var img = document.createElement('img');
-        img.className = 'm-fig';
-        img.src = q.rightImages[ri];
-        img.alt = '';            // 보기 그림 — 이름을 읽어 주면 답이 새어 나간다
-        li.innerHTML = mark;
-        li.appendChild(img);
-      } else {
-        li.innerHTML = mark + '<span>' + escapeHtml(text) + '</span>';
-      }
-      list.appendChild(li);
+    var picks = Array.isArray(mine) ? mine.slice() : [];
+    var armed = null;          // {side:'L'|'R', idx} — 지금 집어 든 쪽
+
+    var box = document.createElement('div');
+    box.className = 'match-connect' + (withImg ? ' has-fig' : '') + (opts.readOnly ? ' is-review' : '');
+
+    var wires = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    wires.setAttribute('class', 'mc-wires');
+    box.appendChild(wires);
+
+    var colL = document.createElement('div'); colL.className = 'mc-col mc-left';
+    var gap = document.createElement('div');  gap.className = 'mc-gap';
+    var colR = document.createElement('div'); colR.className = 'mc-col mc-right';
+    box.appendChild(colL); box.appendChild(gap); box.appendChild(colR);
+
+    var leftBtns = [], rightBtns = [];
+
+    function makeBtn(side, idx, mark, text, imgSrc) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mc-item mc-' + side;
+      var dot = document.createElement('span');
+      dot.className = 'mc-dot';
+      var body = matchItemBody(mark, text, imgSrc);
+      if (side === 'l') { b.appendChild(body); b.appendChild(dot); }
+      else { b.appendChild(dot); b.appendChild(body); }
+      b._dot = dot;
+      if (opts.readOnly) b.disabled = true;
+      else b.addEventListener('click', function () { tap(side, idx); });
+      return b;
+    }
+
+    q.left.forEach(function (text, li) {
+      var b = makeBtn('l', li, CIRCLED[li], text, null);
+      leftBtns.push(b); colL.appendChild(b);
     });
-    return list;
+    q.right.forEach(function (text, ri) {
+      var b = makeBtn('r', ri, MATCH_MARKS[ri], text, withImg ? q.rightImages[ri] : null);
+      rightBtns.push(b); colR.appendChild(b);
+    });
+
+    function leftUsing(ri) {
+      for (var i = 0; i < picks.length; i++) if (picks[i] === ri) return i;
+      return -1;
+    }
+
+    function connect(li, ri) {
+      var prev = leftUsing(ri);
+      if (prev !== -1) picks[prev] = undefined;   // 보기 하나에 선 하나 — 앞의 선을 걷어낸다
+      picks[li] = ri;
+    }
+
+    function tap(side, idx) {
+      // 이미 이어진 것을 누르면 선을 걷고 그대로 집어 든다 — 곧바로 다시 이을 수 있게.
+      if (side === 'l') {
+        if (armed && armed.side === 'r') { connect(idx, armed.idx); armed = null; }
+        else if (armed && armed.side === 'l' && armed.idx === idx) { armed = null; }
+        else {
+          if (typeof picks[idx] === 'number') picks[idx] = undefined;
+          armed = { side: 'l', idx: idx };
+        }
+      } else {
+        if (armed && armed.side === 'l') { connect(armed.idx, idx); armed = null; }
+        else if (armed && armed.side === 'r' && armed.idx === idx) { armed = null; }
+        else {
+          var owner = leftUsing(idx);
+          if (owner !== -1) picks[owner] = undefined;
+          armed = { side: 'r', idx: idx };
+        }
+      }
+      paint();
+      onChange(picks.slice());
+    }
+
+    /** 점의 중심을 판 기준 좌표로 */
+    function dotAt(btn) {
+      var r = btn._dot.getBoundingClientRect();
+      var o = box.getBoundingClientRect();
+      return { x: r.left - o.left + r.width / 2, y: r.top - o.top + r.height / 2 };
+    }
+
+    function line(a, b, cls) {
+      var el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      el.setAttribute('x1', a.x); el.setAttribute('y1', a.y);
+      el.setAttribute('x2', b.x); el.setAttribute('y2', b.y);
+      el.setAttribute('class', cls);
+      wires.appendChild(el);
+    }
+
+    function paint() {
+      leftBtns.forEach(function (b, i) {
+        b.classList.toggle('is-armed', !!armed && armed.side === 'l' && armed.idx === i);
+        b.classList.toggle('is-linked', typeof picks[i] === 'number');
+      });
+      rightBtns.forEach(function (b, i) {
+        b.classList.toggle('is-armed', !!armed && armed.side === 'r' && armed.idx === i);
+        b.classList.toggle('is-linked', leftUsing(i) !== -1);
+      });
+
+      var o = box.getBoundingClientRect();
+      wires.setAttribute('width', o.width);
+      wires.setAttribute('height', o.height);
+      wires.setAttribute('viewBox', '0 0 ' + o.width + ' ' + o.height);
+      while (wires.firstChild) wires.removeChild(wires.firstChild);
+      if (!o.width) return;
+
+      picks.forEach(function (ri, li) {
+        if (typeof ri !== 'number' || !rightBtns[ri]) return;
+        var cls = 'w-mine';
+        if (opts.answer) cls = (opts.answer[li] === ri) ? 'w-ok' : 'w-no';
+        line(dotAt(leftBtns[li]), dotAt(rightBtns[ri]), cls);
+      });
+      // 복기: 틀린 자리의 정답 선을 점선으로 겹쳐 보인다
+      if (opts.answer) {
+        opts.answer.forEach(function (ri, li) {
+          if (picks[li] === ri || !rightBtns[ri]) return;
+          line(dotAt(leftBtns[li]), dotAt(rightBtns[ri]), 'w-want');
+        });
+      }
+    }
+
+    // 글자·그림이 늦게 자리를 잡으면 선이 어긋난다. 판이 움직일 때마다 다시 긋는다.
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () { paint(); });
+      ro.observe(box);
+    } else {
+      window.addEventListener('resize', paint);
+    }
+    box.querySelectorAll('img').forEach(function (img) {
+      if (!img.complete) img.addEventListener('load', paint);
+    });
+    setTimeout(paint, 0);
+    paint();
+    return box;
+  }
+
+  /** 시험·학습에서 답을 고르는 판 */
+  function buildMatchBox(q, mine, onChange) {
+    var wrap = document.createElement('div');
+    wrap.className = 'match-box';
+    var hint = document.createElement('p');
+    hint.className = 'mc-hint';
+    hint.textContent = '왼쪽 항목과 오른쪽 보기를 차례로 눌러 연결하세요. 이미 이어진 것을 누르면 선을 지우고 다시 이을 수 있습니다.';
+    wrap.appendChild(hint);
+    wrap.appendChild(buildMatchConnect(q, mine, onChange, {}));
+    return wrap;
+  }
+
+  /** 채점 뒤 복기 판 — 내 선과 정답 선을 함께 보인다 */
+  function buildMatchReview(q, mine) {
+    var wrap = document.createElement('div');
+    wrap.className = 'match-box';
+    wrap.appendChild(buildMatchConnect(q, mine, function () {}, { readOnly: true, answer: q.answer }));
+
+    var picks = Array.isArray(mine) ? mine : [];
+    var legend = document.createElement('p');
+    legend.className = 'mc-legend';
+    legend.innerHTML = q.left.map(function (t, li) {
+      var got = picks[li], want = q.answer[li];
+      var ok = got === want;
+      return '<span class="' + (ok ? 'ok' : 'no') + '">' + CIRCLED[li] + ' ' +
+        (typeof got === 'number' ? MATCH_MARKS[got] : '－') +
+        (ok ? ' ✓' : ' ✗ → ' + MATCH_MARKS[want]) + '</span>';
+    }).join('');
+    wrap.appendChild(legend);
+    return wrap;
   }
 
   function buildExam(modeKey, subjectKey) {
