@@ -3,7 +3,6 @@
   'use strict';
 
   var EXAM_MINUTES = 60;
-  var OX_MAX = 3;         // 시험당 OX형 상한 (기출에서 OX는 소수)
   var PASS = 60;
 
   // 시험 유형. 문항 수는 과목마다 다르므로 여기 두지 않고 SUBJECTS.exam 에서 가져온다.
@@ -27,7 +26,8 @@
       code: '대분류 인쇄·목재·가구·공예 · 소분류 귀금속·보석 · 능력단위 주얼리 제품 관리 (LM2202020611_16v3)',
       title: '주얼리 제품 관리<br>모의평가 문제지',
       note: 'source-note-jewelry',
-      exam: { full: { mc: 16, sa: 4 }, sa: { mc: 0, sa: 20 } },
+      // 연결형이 없던 시절 과목이라 예전 구성을 그대로 둔다(진위형은 최대 3문항이었다).
+      exam: { full: { ox: 3, mc: 13, sa: 4 }, sa: { sa: 20 } },
       files: true, filesDesc: '이 시험의 모든 문항이 나온 원본 교재',
       hidden: true      // 시험이 끝나 표지에서 내림. 문제·순위 기록은 그대로 남아 있다.
     },
@@ -37,7 +37,8 @@
       code: '과정평가형 필기 · 왁스카빙 · 조립가공 · 가공안전관리 · 펜던트세공 · 기초조각 · 솔더링/버프연마 · 주얼리 제품 관리',
       title: '귀금속가공기능사<br>모의평가 문제지',
       note: 'source-note-metalwork',
-      exam: { full: { mc: 20, sa: 5 }, sa: { mc: 0, sa: 25 } },
+      // 외부평가 가이드의 네 유형을 모두 낸다. 선택형 20 + 단답형 5 = 25문항.
+      exam: { full: { ox: 4, match: 4, mc: 12, sa: 5 }, sa: { sa: 25 } },
       // 7개 능력단위 중 「주얼리 제품 관리」의 원본 교재라 이 과목에서도 쓸모가 있다.
       files: true, filesDesc: '7개 능력단위 중 「주얼리 제품 관리」 50문항의 원본 교재'
     }
@@ -61,15 +62,23 @@
    */
   function planOf(subjectKey, modeKey) {
     var m = modeOf(modeKey);
-    var e = (subjectOf(subjectKey).exam || {})[m.key] || { mc: 0, sa: 0 };
-    var total = e.mc + e.sa;
+    var e = (subjectOf(subjectKey).exam || {})[m.key] || {};
+    var counts = {};
+    var total = 0;
+    TYPE_ORDER.forEach(function (t) { counts[t] = e[t] || 0; total += counts[t]; });
+    var objective = total - counts.sa;
     return {
       key: m.key, label: m.label, short: m.short,
-      mc: e.mc, sa: e.sa, total: total,
+      counts: counts, total: total,
+      mc: counts.mc, sa: counts.sa,
       photoMc: m.photoMc, photoSa: m.photoSa,
       point: total ? 100 / total : 0,
-      // "객관식 20 + 주관식 5" / "주관식 25문항"
-      compose: e.mc ? '객관식 ' + e.mc + ' + 주관식 ' + e.sa : '주관식 ' + e.sa + '문항'
+      // "선택형 20 + 단답형 5" / "단답형 25문항"
+      compose: objective ? '선택형 ' + objective + ' + 단답형 ' + counts.sa
+                         : '단답형 ' + counts.sa + '문항',
+      // "진위형 4 · 연결형 4 · 4지택일 12 · 단답형 5"
+      breakdown: TYPE_ORDER.filter(function (t) { return counts[t]; })
+        .map(function (t) { return TYPES[t].label + ' ' + counts[t]; }).join(' · ')
     };
   }
 
@@ -119,6 +128,12 @@
   // 정답 서명 — 같은 사실을 묻는 문항이 한 시험지에 함께 나오지 않도록 하는 열쇠.
   // OX형(선지 2개)은 정답이 늘 "옳다/틀리다"라 서명이 무의미하므로 제외한다.
   function answerSig(q) {
+    if (isMatch(q)) {
+      // 짝지어진 쌍 전체가 그 문항의 사실이다.
+      return 'a:' + (q.left || []).map(function (l, i) {
+        return normalizeSA(l) + '=' + normalizeSA((q.right || [])[i]);
+      }).sort().join('|');
+    }
     if (q.type === 'mc') {
       if (!q.choices || q.choices.length !== 4) return null;
       return 'a:' + normalizeSA(q.choices[q.answer]);
@@ -127,6 +142,30 @@
   }
 
   function isOX(q) { return q.type === 'mc' && q.choices && q.choices.length === 2; }
+  function isMatch(q) { return q.type === 'match'; }
+
+  /* 외부평가 가이드가 정한 네 가지 문제 유형.
+   * 진위형·연결형·4지택일은 선택형, 단답형만 주관식이다.
+   * bucket 은 문제은행에서 그 유형만 골라내는 체.
+   */
+  var TYPES = {
+    ox:    { key: 'ox',    label: '진위형', bucket: function (q) { return isOX(q); } },
+    match: { key: 'match', label: '연결형', bucket: isMatch },
+    mc:    { key: 'mc',    label: '4지택일', bucket: function (q) { return q.type === 'mc' && !isOX(q); } },
+    sa:    { key: 'sa',    label: '단답형', bucket: function (q) { return q.type === 'sa'; } }
+  };
+  // 시험지에 실리는 차례 — 외부평가 가이드의 배열을 따른다.
+  var TYPE_ORDER = ['ox', 'match', 'mc', 'sa'];
+
+  function typeLabel(q) {
+    for (var i = 0; i < TYPE_ORDER.length; i++) {
+      var t = TYPES[TYPE_ORDER[i]];
+      if (t.bucket(q)) return t.label;
+    }
+    return '문항';
+  }
+
+  var MATCH_MARKS = ['㉠', '㉡', '㉢', '㉣', '㉤', '㉥'];
 
   /* ---------- 복수답 주관식: 답 개수만큼 답란을 나눈다 ---------- */
 
@@ -158,11 +197,16 @@
 
   function hasAnswer(q, mine) {
     if (q.type === 'mc') return mine !== undefined;
+    if (isMatch(q)) {
+      // 하나라도 비어 있으면 어차피 오답이라 '기입함'으로 세지 않는다.
+      return Array.isArray(mine) && mine.length === q.left.length &&
+        mine.every(function (v) { return typeof v === 'number'; });
+    }
     return answerFields(q, mine).some(function (v) { return (v || '').trim() !== ''; });
   }
 
   // 단원별로 골고루: 단원 그룹 셔플 후 라운드로빈.
-  // 정답이 겹치는 문항과, OX_MAX를 넘는 OX형은 뒤로 미룬다(모자라면 되돌려 채움).
+  // 정답이 겹치는 문항은 뒤로 미룬다(모자라면 되돌려 채움).
   function sampleSpread(pool, n, usedSigs, counters) {
     var byUnit = {};
     pool.forEach(function (q) { (byUnit[q.unit] = byUnit[q.unit] || []).push(q); });
@@ -177,9 +221,7 @@
       gi++;
       var sig = answerSig(q);
       if (sig && usedSigs[sig]) { skipped.push(q); continue; }
-      if (isOX(q) && counters.ox >= OX_MAX) { skipped.push(q); continue; }
       if (sig) usedSigs[sig] = true;
-      if (isOX(q)) counters.ox++;
       picked.push(q);
     }
     while (picked.length < n && skipped.length) picked.push(skipped.pop());
@@ -428,39 +470,142 @@
     return shuffle(photos.concat(rest));
   }
 
+  /* 유형마다 출제용 사본을 만든다. 선지·보기의 차례는 여기서 섞는다. */
+  function makeItem(q, typeKey) {
+    if (typeKey === 'match') {
+      // 오른쪽 보기를 섞고, 왼쪽 i번이 가리켜야 할 자리를 answer 에 적어 둔다.
+      var order = shuffle(q.right.map(function (_, i) { return i; }));
+      var place = [];
+      order.forEach(function (from, to) { place[from] = to; });
+      return {
+        id: q.id, type: 'match', unit: q.unit, source: q.source, question: q.question,
+        left: q.left.slice(),
+        right: order.map(function (i) { return q.right[i]; }),
+        answer: q.left.map(function (_, i) { return place[i]; }),
+        explanation: q.explanation
+      };
+    }
+    if (typeKey === 'sa') {
+      return {
+        id: q.id, type: 'sa', unit: q.unit, source: q.source, question: q.question,
+        image: q.image || null,
+        accept: q.accept || [], keywords: q.keywords || null, answerText: q.answerText,
+        explanation: q.explanation
+      };
+    }
+    // 진위형·4지택일 — 진위형은 ○/× 차례를 흔들면 헷갈리므로 그대로 둔다.
+    var ord = isOX(q) ? q.choices.map(function (_, i) { return i; })
+                      : shuffle(q.choices.map(function (_, i) { return i; }));
+    return {
+      id: q.id, type: 'mc', unit: q.unit, source: q.source, question: q.question,
+      image: q.image || null,
+      choices: ord.map(function (i) { return q.choices[i]; }),
+      answer: ord.indexOf(q.answer),
+      explanation: q.explanation
+    };
+  }
+
+  /**
+   * 연결형 답안칸. 왼쪽 항목마다 고르개를 하나씩 두고 ㉠㉡㉢㉣ 중 하나를 고르게 한다.
+   * 끌어다 놓기는 폰에서 다루기 어려워 고르개로 갔다.
+   */
+  function buildMatchBox(q, mine, onChange) {
+    var box = document.createElement('div');
+    box.className = 'match-box';
+
+    var picks = Array.isArray(mine) ? mine.slice() : [];
+
+    var pairs = document.createElement('div');
+    pairs.className = 'match-pairs';
+    q.left.forEach(function (text, li) {
+      var row = document.createElement('div');
+      row.className = 'match-row';
+      row.innerHTML = '<span class="m-num">' + CIRCLED[li] + '</span>' +
+        '<span class="m-text">' + escapeHtml(text) + '</span>';
+
+      var sel = document.createElement('select');
+      sel.className = 'm-pick';
+      sel.setAttribute('aria-label', text + ' 에 연결할 보기');
+      sel.innerHTML = '<option value="">－</option>' +
+        q.right.map(function (_, ri) {
+          return '<option value="' + ri + '">' + MATCH_MARKS[ri] + '</option>';
+        }).join('');
+      sel.value = (typeof picks[li] === 'number') ? String(picks[li]) : '';
+      sel.addEventListener('change', function () {
+        picks[li] = sel.value === '' ? undefined : Number(sel.value);
+        onChange(picks.slice());
+      });
+      row.appendChild(sel);
+      pairs.appendChild(row);
+    });
+    box.appendChild(pairs);
+
+    var list = document.createElement('ul');
+    list.className = 'match-right';
+    q.right.forEach(function (text, ri) {
+      var li = document.createElement('li');
+      li.innerHTML = '<span class="m-mark">' + MATCH_MARKS[ri] + '</span>' +
+        '<span>' + escapeHtml(text) + '</span>';
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+    return box;
+  }
+
+  /** 연결형 복기 — 줄마다 내가 고른 것과 정답을 나란히 보인다. */
+  function buildMatchReview(q, mine) {
+    var box = document.createElement('div');
+    box.className = 'match-box';
+    var picks = Array.isArray(mine) ? mine : [];
+
+    var pairs = document.createElement('div');
+    pairs.className = 'match-pairs';
+    q.left.forEach(function (text, li) {
+      var got = picks[li];
+      var want = q.answer[li];
+      var ok = got === want;
+      var row = document.createElement('div');
+      row.className = 'match-row rline ' + (ok ? 'ok' : 'no');
+      row.innerHTML =
+        '<span class="m-num">' + CIRCLED[li] + '</span>' +
+        '<span class="m-text">' + escapeHtml(text) + '</span>' +
+        '<span class="m-got">' +
+          (typeof got === 'number' ? MATCH_MARKS[got] : '－') +
+          (ok ? ' ✓' : ' ✗ → <b>' + MATCH_MARKS[want] + '</b>') +
+        '</span>';
+      pairs.appendChild(row);
+    });
+    box.appendChild(pairs);
+
+    var list = document.createElement('ul');
+    list.className = 'match-right';
+    q.right.forEach(function (text, ri) {
+      var li = document.createElement('li');
+      li.innerHTML = '<span class="m-mark">' + MATCH_MARKS[ri] + '</span>' +
+        '<span>' + escapeHtml(text) + '</span>';
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+    return box;
+  }
+
   function buildExam(modeKey, subjectKey) {
     var m = planOf(subjectKey, modeKey);
     var BANK = bankOf(subjectKey);
-    var usedSigs = {};   // 객관식·주관식이 서명을 공유해야 "정의 문항"이 양쪽에 겹치지 않는다
-    var counters = { ox: 0 };
-    var mc = [];
-    var sa = [];
+    var usedSigs = {};   // 유형이 달라도 서명을 공유해야 같은 사실이 두 번 나오지 않는다
+    var counters = {};
+    var out = [];
 
-    if (m.mc > 0) {
-      var mcPool = BANK.filter(function (q) { return q.type === 'mc'; });
-      mc = pickWithPhotos(mcPool, m.mc, m.photoMc, usedSigs, counters).map(function (q) {
-        var order = shuffle(q.choices.map(function (_, i) { return i; }));
-        return {
-          id: q.id, type: 'mc', unit: q.unit, source: q.source, question: q.question,
-          image: q.image || null,
-          choices: order.map(function (i) { return q.choices[i]; }),
-          answer: order.indexOf(q.answer),
-          explanation: q.explanation
-        };
+    TYPE_ORDER.forEach(function (tk) {
+      var want = m.counts[tk];
+      if (!want) return;
+      var pool = BANK.filter(TYPES[tk].bucket);
+      var photoMin = tk === 'sa' ? m.photoSa : (tk === 'mc' ? m.photoMc : 0);
+      pickWithPhotos(pool, want, photoMin, usedSigs, counters).forEach(function (q) {
+        out.push(makeItem(q, tk));
       });
-    }
-    if (m.sa > 0) {
-      var saPool = BANK.filter(function (q) { return q.type === 'sa'; });
-      sa = pickWithPhotos(saPool, m.sa, m.photoSa, usedSigs, counters).map(function (q) {
-        return {
-          id: q.id, type: 'sa', unit: q.unit, source: q.source, question: q.question,
-          image: q.image || null,
-          accept: q.accept || [], keywords: q.keywords || null, answerText: q.answerText,
-          explanation: q.explanation
-        };
-      });
-    }
-    return mc.concat(sa); // 전체 시험은 1~16 객관식 / 17~20 주관식
+    });
+    return out;   // 진위형 → 연결형 → 4지택일 → 단답형 차례
   }
 
   function startExam(saved, modeKey, subjectKey) {
@@ -601,7 +746,7 @@
     var meta = document.createElement('div');
     meta.className = 'qmeta';
     meta.innerHTML =
-      '<span class="tag ' + q.type + '">' + (q.type === 'mc' ? '객관식' : '주관식') + '</span>' +
+      '<span class="tag ' + q.type + '">' + typeLabel(q) + '</span>' +
       '<span class="tag unit">' + escapeHtml(q.unit) + '</span>';
     card.appendChild(meta);
 
@@ -622,7 +767,13 @@
       card.appendChild(img);
     }
 
-    if (q.type === 'mc') {
+    if (isMatch(q)) {
+      card.appendChild(buildMatchBox(q, state.answers[i], function (picks) {
+        state.answers[i] = picks;
+        persistInProgress();
+        updateQnav();
+      }));
+    } else if (q.type === 'mc') {
       var wrap = document.createElement('div');
       wrap.className = 'choices';
       q.choices.forEach(function (c, ci) {
@@ -654,6 +805,12 @@
   }
 
   /* ---------- 채점 ---------- */
+
+  /** 연결형은 네 쌍을 모두 맞춰야 정답이다 — 부분 점수는 없다. */
+  function gradeMatch(q, mine) {
+    if (!Array.isArray(mine) || mine.length !== q.answer.length) return false;
+    return q.answer.every(function (a, i) { return mine[i] === a; });
+  }
 
   function gradeSA(q, userInput) {
     var vals = answerFields(q, userInput).map(normalizeSA);
@@ -723,7 +880,8 @@
     var results = state.questions.map(function (q, i) {
       var mine = state.answers[i];
       var correct;
-      if (q.type === 'mc') correct = mine === q.answer;
+      if (isMatch(q)) correct = gradeMatch(q, mine);
+      else if (q.type === 'mc') correct = mine === q.answer;
       else correct = gradeSA(q, mine) || !!state.selfGrade[i];
       return { q: q, mine: mine, correct: correct, idx: i };
     });
@@ -833,7 +991,7 @@
     head.innerHTML =
       '<span class="rnum">' + (r.idx + 1) + '번</span>' +
       '<span class="badge ' + (r.correct ? 'ok' : 'no') + '">' + (r.correct ? '정답' : '오답') + '</span>' +
-      '<span class="tag ' + q.type + '">' + (q.type === 'mc' ? '객관식' : '주관식') + '</span>' +
+      '<span class="tag ' + q.type + '">' + typeLabel(q) + '</span>' +
       '<span class="tag unit">' + escapeHtml(q.unit) + '</span>';
     card.appendChild(head);
 
@@ -849,7 +1007,9 @@
       card.appendChild(img);
     }
 
-    if (q.type === 'mc') {
+    if (isMatch(q)) {
+      card.appendChild(buildMatchReview(q, r.mine));
+    } else if (q.type === 'mc') {
       var ul = document.createElement('ul');
       ul.className = 'rchoices';
       q.choices.forEach(function (c, ci) {
@@ -945,15 +1105,9 @@
   function studyReload() {
     // 선지 순서를 섞어 위치를 외우지 못하게 한다
     study.list = shuffle(studyPool()).map(function (q) {
+      if (isMatch(q)) return makeItem(q, 'match');
       if (q.type !== 'mc') return q;
-      var order = shuffle(q.choices.map(function (_, i) { return i; }));
-      return {
-        id: q.id, type: 'mc', unit: q.unit, source: q.source, question: q.question,
-        image: q.image || null,
-        choices: order.map(function (i) { return q.choices[i]; }),
-        answer: order.indexOf(q.answer),
-        explanation: q.explanation
-      };
+      return makeItem(q, isOX(q) ? 'ox' : 'mc');
     });
     study.idx = 0;
     study.seen = {};
@@ -977,6 +1131,9 @@
     var correct;
     if (gaveUp) {
       correct = false;
+    } else if (isMatch(q)) {
+      if (!hasAnswer(q, study.mine)) { alert('네 항목을 모두 연결해 주세요.'); return; }
+      correct = gradeMatch(q, study.mine);
     } else if (q.type === 'mc') {
       if (study.mine === undefined) { alert('답을 선택해 주세요.'); return; }
       correct = study.mine === q.answer;
@@ -1034,7 +1191,11 @@
       card.appendChild(img);
     }
 
-    if (q.type === 'mc') {
+    if (isMatch(q)) {
+      card.appendChild(study.checked
+        ? buildMatchReview(q, study.mine)
+        : buildMatchBox(q, study.mine, function (picks) { study.mine = picks; }));
+    } else if (q.type === 'mc') {
       var wrap = document.createElement('div');
       wrap.className = 'choices';
       q.choices.forEach(function (c, ci) {
@@ -1210,7 +1371,7 @@
 
     var full = planOf(s.key, 'full'), only = planOf(s.key, 'sa');
     $('#cover-total').textContent = full.total + '문항';
-    $('#cover-compose').textContent = '객관식 ' + full.mc + ' · 주관식 ' + full.sa;
+    $('#cover-compose').textContent = full.breakdown;
     $('#cover-point').textContent = '100점 (문항당 ' + full.point + '점)';
     $('#hint-full').textContent = full.compose;
     $('#hint-sa').textContent = only.compose;

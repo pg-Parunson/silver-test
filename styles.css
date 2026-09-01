@@ -208,6 +208,48 @@ button:disabled { opacity: 0.35; cursor: default; }
   .ad-right { left:  calc(50% + 380px + 56px); }
 }
 
+/* ── 연결형 ── */
+.match-box { margin-top: 4px; }
+.match-pairs { display: flex; flex-direction: column; gap: 7px; }
+.match-row {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 9px 10px; background: #fcfbf7;
+}
+.match-row .m-num { font-weight: 800; color: var(--navy); flex: none; }
+.match-row .m-text { flex: 1; min-width: 0; font-size: 0.95rem; word-break: keep-all; }
+.match-row .m-pick {
+  flex: none; width: 62px; text-align: center;
+  font-family: var(--sans); font-size: 0.98rem; font-weight: 700;
+  border: 1px solid var(--line-dark); border-radius: 4px;
+  background: var(--paper); color: var(--ink); padding: 7px 4px;
+}
+.match-row .m-pick:focus { outline: none; border-color: var(--navy); }
+
+/* 오른쪽 보기 — 고르개에 붙은 기호가 무엇인지 알려 주는 판 */
+.match-right {
+  list-style: none; margin: 12px 0 0; padding: 12px 12px 10px;
+  border: 1px dashed var(--line-dark); border-radius: 4px; background: #f7f5ee;
+}
+.match-right li {
+  display: flex; gap: 8px; align-items: baseline;
+  font-size: 0.92rem; padding: 3px 0; word-break: keep-all;
+}
+.match-right .m-mark { font-weight: 800; color: var(--stamp-ink); flex: none; }
+
+/* 복기 — 줄마다 맞고 틀림을 표시한다 */
+.match-row.rline.ok { border-color: var(--green); background: var(--green-soft); }
+.match-row.rline.no { border-color: var(--red); background: var(--red-soft); }
+.match-row .m-got {
+  flex: none; font-family: var(--sans); font-weight: 800; font-size: 0.86rem; white-space: nowrap;
+}
+.match-row.rline.ok .m-got { color: var(--green); }
+.match-row.rline.no .m-got { color: var(--red); }
+.match-row.rline.no .m-got b { color: var(--green); }
+
+/* 유형 딱지 */
+.tag.match { background: var(--navy-soft); color: var(--navy); }
+
 /* 순위표에 못 올린 점수 알림 — 조용히 사라지면 아무도 모른다 */
 .pending-note {
   color: var(--red); font-weight: 700;
