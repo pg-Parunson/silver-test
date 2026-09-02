@@ -319,7 +319,17 @@ button:disabled { opacity: 0.35; cursor: default; }
 .rank-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 0.82rem; table-layout: fixed; }
 .rank-table th, .rank-table td { border: 1px solid var(--line-dark); padding: 7px 2px; text-align: center; word-break: keep-all; }
 .rank-table thead th { background: #f1efe8; font-weight: 700; font-size: 0.72rem; }
-.rank-table col.c-rank { width: 12%; }
+.rank-table col.c-rank { width: 15%; }
+
+/* 1·2·3등 왕관 — 좁은 칸이라 아주 작게, 숫자와 나란히 */
+.rank-table .r-top {
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  font-weight: 800; line-height: 1;
+}
+.rank-table .crown { width: 16px; height: 16px; flex: none; display: block; }
+@media (max-width: 360px) {
+  .rank-table .crown { width: 14px; height: 14px; }
+}
 .rank-table col.c-name { width: 20%; }
 .rank-table col.c-score { width: 16%; }
 .rank-table col.c-pass { width: 17%; }

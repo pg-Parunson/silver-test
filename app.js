@@ -417,6 +417,20 @@
     }, Promise.resolve()).then(function () { return done; });
   }
 
+  // 1·2·3등 왕관. 순위 칸이 좁아 16px 로 들어가므로 그림은 단순한 실루엣이어야 한다.
+  var CROWNS = ['assets/crowns/crown-gold.webp',
+                'assets/crowns/crown-silver.webp',
+                'assets/crowns/crown-bronze.webp'];
+  var CROWN_LABEL = ['1등', '2등', '3등'];
+
+  /** 순위 칸 — 상위 세 명은 왕관을 앞에 세운다 */
+  function rankCell(i) {
+    if (i > 2) return '<td>' + (i + 1) + '</td>';
+    // td 를 flex 로 만들면 표의 칸 너비 계산이 깨지므로 안쪽 래퍼에 건다
+    return '<td><span class="r-top"><img class="crown" src="' + CROWNS[i] + '" alt="' +
+      CROWN_LABEL[i] + '" width="16" height="16">' + (i + 1) + '</span></td>';
+  }
+
   function renderRankingInto(tbodyId, myId, mode) {
     var tbody = document.getElementById(tbodyId);
     if (!tbody) return Promise.resolve();
@@ -432,7 +446,7 @@
         if (myId && r.id === myId) tr.className += ' r-me';
         var pass = r.score >= PASS;
         tr.innerHTML =
-          '<td>' + (i + 1) + '</td>' +
+          rankCell(i) +
           '<td>' + escapeHtml(r.name_masked) + '</td>' +
           '<td>' + r.score + '점</td>' +
           '<td class="' + (pass ? 'pass' : 'fail') + '">' + (pass ? '합격' : '불합격') + '</td>' +
