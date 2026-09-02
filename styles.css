@@ -199,7 +199,7 @@ button:disabled { opacity: 0.35; cursor: default; }
 
   /* 시험지 가장자리에서 20px 떨어뜨린다. 화면이 더 넓어져도 시험지에 붙어 따라온다. */
   .ad-left  { right: calc(50% + 380px + 20px); background-image: url("assets/banner-charm.webp"); }
-  .ad-right { left:  calc(50% + 380px + 20px); background-image: url("assets/banner-wealth.webp"); }
+  .ad-right { left:  calc(50% + 380px + 20px); background-image: url("assets/banner-micky.webp"); }
 }
 
 /* 아주 넓은 화면에서는 시험지에서 조금 더 떼어 놓는다 */
